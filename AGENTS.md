@@ -33,6 +33,10 @@ uv run --python 3.12 --with mcp==2.3.0 python tools/mcp_smoke.py
 
 Every script or library added under a skill's `scripts/` or `assets/` needs tests in `tools/` (`test_game_scripts.py` for Python, `test_game_assets.test.mjs` for JavaScript, `luau/test_roblox_modules.luau` for Luau). Pure Luau modules must also pass `luau-analyze --mode=strict` (listed in the CI workflow).
 
+## Hooks
+
+Codex hooks live in `platforms/codex/hooks/`: standard-library Python 3.9+ that fails open (an internal error exits 0 with no output), tested in `tools/test_codex_hooks.py`. Use only hook outputs that the installed Codex accepts: check with `platforms/codex/hooks/discover.py`, and save a new snapshot when Codex changes.
+
 ## MCP servers
 
 MCP servers live in `mcp/<name>/`: tool logic in a standard-library module with unit tests, a thin `server.py` that registers tools, and a README with setup for Claude Code and Codex. One server serves every platform; only registration differs.

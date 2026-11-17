@@ -47,6 +47,12 @@ Codex shows these in its skill picker with a display name and default prompt (`p
 | --- | --- | --- |
 | [roblox-forge](mcp/roblox-forge/README.md) | `create_project`, `check_project`, `audit_remotes`, `check_odds`, `datastore_budget`, `luau_check` | one server for Claude Code and Codex; see its README |
 
+## Hooks
+
+| Hooks | Platform | What they do |
+| --- | --- | --- |
+| [game hooks](platforms/codex/hooks/README.md) | Codex | Detect the engine (Unreal, Unity, Godot, Roblox/Rojo, and more). Add its rules at session start, block publishing and edits to binary or generated files, check edited files, and stop the agent once if errors remain |
+
 ## Layout
 
 ```
@@ -55,6 +61,7 @@ platforms/<platform>/skills/<name>/  # optional per-platform override or platfor
 template/SKILL.md                    # starting point for `new`
 tools/skills.py                      # validate, new, install, uninstall
 mcp/<server>/                        # MCP servers (one per folder, shared by all platforms)
+platforms/codex/hooks/               # Codex lifecycle hooks for game projects
 ```
 
 All six platforms read the same `SKILL.md` format, so a skill lives in `skills/` unless it must differ on one platform. See [platforms/README.md](platforms/README.md) for how overrides work, and each platform's README for its folders and extra frontmatter.

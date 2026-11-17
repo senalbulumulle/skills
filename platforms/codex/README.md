@@ -7,3 +7,4 @@
 - Note: Gemini CLI, Copilot, Cursor, and OpenCode also read `~/.agents/skills/`.
 - Docs: https://developers.openai.com/codex/skills
 - MCP servers: see `mcp/` (for example `mcp/roblox-forge/README.md` for Codex setup).
+- Hooks: `hooks/` has engine-aware game-dev hooks (`install.py`) and `discover.py`, which lists the hook events and outputs the installed Codex binary supports.

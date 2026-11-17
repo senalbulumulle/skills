@@ -1,0 +1,593 @@
+{
+  "codex_version": "0.163.0",
+  "events": {
+    "Interrupt": {
+      "input": [
+        "cwd",
+        "hook_event_name",
+        "model",
+        "permission_mode",
+        "session_id",
+        "transcript_path",
+        "turn_id"
+      ],
+      "required": [
+        "cwd",
+        "hook_event_name",
+        "model",
+        "permission_mode",
+        "session_id",
+        "transcript_path",
+        "turn_id"
+      ],
+      "input_enums": {
+        "permission_mode": [
+          "default",
+          "acceptEdits",
+          "plan",
+          "dontAsk",
+          "bypassPermissions"
+        ]
+      },
+      "codex_extensions": [
+        "turn_id"
+      ],
+      "output": [
+        "systemMessage"
+      ],
+      "output_enums": {}
+    },
+    "PermissionRequest": {
+      "input": [
+        "agent_id",
+        "agent_type",
+        "cwd",
+        "hook_event_name",
+        "model",
+        "permission_mode",
+        "session_id",
+        "tool_input",
+        "tool_name",
+        "transcript_path",
+        "turn_id"
+      ],
+      "required": [
+        "cwd",
+        "hook_event_name",
+        "model",
+        "permission_mode",
+        "session_id",
+        "tool_input",
+        "tool_name",
+        "transcript_path",
+        "turn_id"
+      ],
+      "input_enums": {
+        "permission_mode": [
+          "default",
+          "acceptEdits",
+          "plan",
+          "dontAsk",
+          "bypassPermissions"
+        ]
+      },
+      "codex_extensions": [
+        "turn_id"
+      ],
+      "output": [
+        "continue",
+        "hookSpecificOutput",
+        "stopReason",
+        "suppressOutput",
+        "systemMessage"
+      ],
+      "hookSpecificOutput": [
+        "decision",
+        "hookEventName"
+      ],
+      "output_enums": {}
+    },
+    "PostCompact": {
+      "input": [
+        "agent_id",
+        "agent_type",
+        "cwd",
+        "hook_event_name",
+        "model",
+        "session_id",
+        "transcript_path",
+        "trigger",
+        "turn_id"
+      ],
+      "required": [
+        "cwd",
+        "hook_event_name",
+        "model",
+        "session_id",
+        "transcript_path",
+        "trigger",
+        "turn_id"
+      ],
+      "input_enums": {
+        "trigger": [
+          "manual",
+          "auto"
+        ]
+      },
+      "codex_extensions": [
+        "turn_id"
+      ],
+      "output": [
+        "continue",
+        "stopReason",
+        "suppressOutput",
+        "systemMessage"
+      ],
+      "output_enums": {}
+    },
+    "PostToolUse": {
+      "input": [
+        "agent_id",
+        "agent_type",
+        "cwd",
+        "hook_event_name",
+        "model",
+        "permission_mode",
+        "session_id",
+        "tool_input",
+        "tool_name",
+        "tool_response",
+        "tool_use_id",
+        "transcript_path",
+        "turn_id"
+      ],
+      "required": [
+        "cwd",
+        "hook_event_name",
+        "model",
+        "permission_mode",
+        "session_id",
+        "tool_input",
+        "tool_name",
+        "tool_response",
+        "tool_use_id",
+        "transcript_path",
+        "turn_id"
+      ],
+      "input_enums": {
+        "permission_mode": [
+          "default",
+          "acceptEdits",
+          "plan",
+          "dontAsk",
+          "bypassPermissions"
+        ]
+      },
+      "codex_extensions": [
+        "turn_id"
+      ],
+      "output": [
+        "continue",
+        "decision",
+        "hookSpecificOutput",
+        "reason",
+        "stopReason",
+        "suppressOutput",
+        "systemMessage"
+      ],
+      "hookSpecificOutput": [
+        "additionalContext",
+        "hookEventName",
+        "updatedMCPToolOutput"
+      ],
+      "output_enums": {
+        "decision": [
+          "block"
+        ]
+      }
+    },
+    "PreCompact": {
+      "input": [
+        "agent_id",
+        "agent_type",
+        "cwd",
+        "hook_event_name",
+        "model",
+        "session_id",
+        "transcript_path",
+        "trigger",
+        "turn_id"
+      ],
+      "required": [
+        "cwd",
+        "hook_event_name",
+        "model",
+        "session_id",
+        "transcript_path",
+        "trigger",
+        "turn_id"
+      ],
+      "input_enums": {
+        "trigger": [
+          "manual",
+          "auto"
+        ]
+      },
+      "codex_extensions": [
+        "turn_id"
+      ],
+      "output": [
+        "continue",
+        "stopReason",
+        "suppressOutput",
+        "systemMessage"
+      ],
+      "output_enums": {}
+    },
+    "PreToolUse": {
+      "input": [
+        "agent_id",
+        "agent_type",
+        "cwd",
+        "hook_event_name",
+        "model",
+        "permission_mode",
+        "session_id",
+        "tool_input",
+        "tool_name",
+        "tool_use_id",
+        "transcript_path",
+        "turn_id"
+      ],
+      "required": [
+        "cwd",
+        "hook_event_name",
+        "model",
+        "permission_mode",
+        "session_id",
+        "tool_input",
+        "tool_name",
+        "tool_use_id",
+        "transcript_path",
+        "turn_id"
+      ],
+      "input_enums": {
+        "permission_mode": [
+          "default",
+          "acceptEdits",
+          "plan",
+          "dontAsk",
+          "bypassPermissions"
+        ]
+      },
+      "codex_extensions": [
+        "turn_id"
+      ],
+      "output": [
+        "continue",
+        "decision",
+        "hookSpecificOutput",
+        "reason",
+        "stopReason",
+        "suppressOutput",
+        "systemMessage"
+      ],
+      "hookSpecificOutput": [
+        "additionalContext",
+        "hookEventName",
+        "permissionDecision",
+        "permissionDecisionReason",
+        "updatedInput"
+      ],
+      "output_enums": {
+        "decision": [
+          "approve",
+          "block"
+        ],
+        "permissionDecision": [
+          "allow",
+          "deny",
+          "ask"
+        ]
+      }
+    },
+    "SessionEnd": {
+      "input": [
+        "cwd",
+        "hook_event_name",
+        "reason",
+        "session_id",
+        "transcript_path"
+      ],
+      "required": [
+        "cwd",
+        "hook_event_name",
+        "reason",
+        "session_id",
+        "transcript_path"
+      ],
+      "input_enums": {},
+      "codex_extensions": []
+    },
+    "SessionStart": {
+      "input": [
+        "cwd",
+        "hook_event_name",
+        "model",
+        "permission_mode",
+        "session_id",
+        "source",
+        "transcript_path"
+      ],
+      "required": [
+        "cwd",
+        "hook_event_name",
+        "model",
+        "permission_mode",
+        "session_id",
+        "source",
+        "transcript_path"
+      ],
+      "input_enums": {
+        "permission_mode": [
+          "default",
+          "acceptEdits",
+          "plan",
+          "dontAsk",
+          "bypassPermissions"
+        ],
+        "source": [
+          "startup",
+          "resume",
+          "clear",
+          "compact",
+          "fork"
+        ]
+      },
+      "codex_extensions": [],
+      "output": [
+        "continue",
+        "hookSpecificOutput",
+        "stopReason",
+        "suppressOutput",
+        "systemMessage"
+      ],
+      "hookSpecificOutput": [
+        "additionalContext",
+        "hookEventName"
+      ],
+      "output_enums": {}
+    },
+    "Stop": {
+      "input": [
+        "cwd",
+        "hook_event_name",
+        "last_assistant_message",
+        "model",
+        "permission_mode",
+        "session_id",
+        "stop_hook_active",
+        "transcript_path",
+        "turn_id"
+      ],
+      "required": [
+        "cwd",
+        "hook_event_name",
+        "last_assistant_message",
+        "model",
+        "permission_mode",
+        "session_id",
+        "stop_hook_active",
+        "transcript_path",
+        "turn_id"
+      ],
+      "input_enums": {
+        "permission_mode": [
+          "default",
+          "acceptEdits",
+          "plan",
+          "dontAsk",
+          "bypassPermissions"
+        ]
+      },
+      "codex_extensions": [
+        "turn_id"
+      ],
+      "output": [
+        "continue",
+        "decision",
+        "reason",
+        "stopReason",
+        "suppressOutput",
+        "systemMessage"
+      ],
+      "output_enums": {
+        "decision": [
+          "block"
+        ]
+      }
+    },
+    "SubagentStart": {
+      "input": [
+        "agent_id",
+        "agent_type",
+        "cwd",
+        "hook_event_name",
+        "model",
+        "permission_mode",
+        "session_id",
+        "transcript_path",
+        "turn_id"
+      ],
+      "required": [
+        "agent_id",
+        "agent_type",
+        "cwd",
+        "hook_event_name",
+        "model",
+        "permission_mode",
+        "session_id",
+        "transcript_path",
+        "turn_id"
+      ],
+      "input_enums": {
+        "permission_mode": [
+          "default",
+          "acceptEdits",
+          "plan",
+          "dontAsk",
+          "bypassPermissions"
+        ]
+      },
+      "codex_extensions": [
+        "turn_id"
+      ],
+      "output": [
+        "continue",
+        "hookSpecificOutput",
+        "stopReason",
+        "suppressOutput",
+        "systemMessage"
+      ],
+      "hookSpecificOutput": [
+        "additionalContext",
+        "hookEventName"
+      ],
+      "output_enums": {}
+    },
+    "SubagentStop": {
+      "input": [
+        "agent_id",
+        "agent_transcript_path",
+        "agent_type",
+        "cwd",
+        "hook_event_name",
+        "last_assistant_message",
+        "model",
+        "permission_mode",
+        "session_id",
+        "stop_hook_active",
+        "transcript_path",
+        "turn_id"
+      ],
+      "required": [
+        "agent_id",
+        "agent_transcript_path",
+        "agent_type",
+        "cwd",
+        "hook_event_name",
+        "last_assistant_message",
+        "model",
+        "permission_mode",
+        "session_id",
+        "stop_hook_active",
+        "transcript_path",
+        "turn_id"
+      ],
+      "input_enums": {
+        "permission_mode": [
+          "default",
+          "acceptEdits",
+          "plan",
+          "dontAsk",
+          "bypassPermissions"
+        ]
+      },
+      "codex_extensions": [
+        "turn_id"
+      ],
+      "output": [
+        "continue",
+        "decision",
+        "reason",
+        "stopReason",
+        "suppressOutput",
+        "systemMessage"
+      ],
+      "output_enums": {
+        "decision": [
+          "block"
+        ]
+      }
+    },
+    "UserPromptSubmit": {
+      "input": [
+        "agent_id",
+        "agent_type",
+        "cwd",
+        "hook_event_name",
+        "model",
+        "permission_mode",
+        "prompt",
+        "session_id",
+        "transcript_path",
+        "turn_id"
+      ],
+      "required": [
+        "cwd",
+        "hook_event_name",
+        "model",
+        "permission_mode",
+        "prompt",
+        "session_id",
+        "transcript_path",
+        "turn_id"
+      ],
+      "input_enums": {
+        "permission_mode": [
+          "default",
+          "acceptEdits",
+          "plan",
+          "dontAsk",
+          "bypassPermissions"
+        ]
+      },
+      "codex_extensions": [
+        "turn_id"
+      ],
+      "output": [
+        "continue",
+        "decision",
+        "hookSpecificOutput",
+        "reason",
+        "stopReason",
+        "suppressOutput",
+        "systemMessage"
+      ],
+      "hookSpecificOutput": [
+        "additionalContext",
+        "hookEventName"
+      ],
+      "output_enums": {
+        "decision": [
+          "block"
+        ]
+      }
+    }
+  },
+  "rejected_outputs": [
+    "PermissionRequest: continue:false",
+    "PermissionRequest: interrupt:true",
+    "PermissionRequest: stopReason",
+    "PermissionRequest: suppressOutput",
+    "PermissionRequest: updatedInput",
+    "PermissionRequest: updatedPermissions",
+    "PostToolUse: reason requires decision",
+    "PostToolUse: suppressOutput",
+    "PostToolUse: updatedMCPToolOutput",
+    "PreToolUse: continue:false",
+    "PreToolUse: decision:approve",
+    "PreToolUse: permissionDecision:allow",
+    "PreToolUse: permissionDecision:ask",
+    "PreToolUse: permissionDecisionReason requires permissionDecision",
+    "PreToolUse: reason requires decision",
+    "PreToolUse: stopReason",
+    "PreToolUse: suppressOutput",
+    "PreToolUse: updatedInput requires permissionDecision:allow"
+  ],
+  "skipped_handler_types": [
+    "agent",
+    "prompt"
+  ],
+  "bypass_trust_flag": true
+}
