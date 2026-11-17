@@ -1,0 +1,4 @@
+interface:
+  display_name: "Roblox Scripting"
+  short_description: "Secure Rojo projects, validated remotes, safe DataStore saves"
+  default_prompt: "Use $roblox-scripting to set up a secure Rojo project with safe player data for my Roblox game."

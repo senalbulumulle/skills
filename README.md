@@ -11,7 +11,41 @@ Creative skills for game development and software development. Each skill works 
 
 ## Skills
 
-None yet.
+### Game development
+
+A pipeline from idea to tested game. Each skill works alone or hands off to the next.
+
+| Skill | What it does | Ships with |
+| --- | --- | --- |
+| `game-concept` | Generates 6 original concepts, scores them, writes a one-page design brief | idea generators, brief template |
+| `game-prototype` | Builds a playable prototype in verified layers; single-file HTML5 by default | canvas starter, HTML/JS checker |
+| `game-feel` | Controls first, then hit stop, shake, squash, particles, popups | `juice.js`, tuning tables |
+| `game-level-design` | Teaches mechanics through levels, paces difficulty, stores levels as data | grid level solver |
+| `game-balance` | Turns targets into curves, time-to-kill, and drop odds | balance calculator |
+| `game-procgen` | Seeded dungeons, caves, noise terrain, scatter, loot | `procgen.js` |
+| `game-ai` | Readable, fair enemies: telegraphs, state machines, steering, A* | `ai.js` |
+| `game-art` | Palette by role, shape language, pixel sprites, readability checks | contrast checker, `pixel-sprite.js` |
+| `game-audio` | Event-mapped Web Audio SFX, voice limits, mixing, music | `sfx.js` synth |
+| `game-playtest` | Automated smoke test, state matrix, prioritized fix list | Playwright playtest script |
+
+In Claude Code, each also accepts an argument after its slash command (for example `/game-prototype docs/design-brief.md`).
+
+### Roblox
+
+| Skill | What it does | Ships with |
+| --- | --- | --- |
+| `roblox-game-design` | Original Roblox concepts, first-minute timeline, social hook, retention, fair and policy-compliant monetization | genre loops, monetization and receipt guide, brief template |
+| `roblox-scripting` | Secure Rojo project structure, validated remotes, session-locked saves | project template and scaffolder; `PlayerData` and `RemoteGuard` modules (strict-typed, tested) |
+| `roblox-gameplay` | Server-authoritative mechanics, rounds, combat, NPCs, mobile UI | `RoundSystem` module, systems reference |
+| `roblox-playtest` | Multi-client testing, exploit checks, data and release checklists | checklist; uses Roblox Studio's MCP server when connected |
+
+Codex shows these in its skill picker with a display name and default prompt (`platforms/codex/`); Claude Code adds argument hints (`platforms/claude/`).
+
+## MCP servers
+
+| Server | Tools | Setup |
+| --- | --- | --- |
+| [roblox-forge](mcp/roblox-forge/README.md) | `create_project`, `check_project`, `audit_remotes`, `check_odds`, `datastore_budget`, `luau_check` | one server for Claude Code and Codex; see its README |
 
 ## Layout
 
@@ -20,6 +54,7 @@ skills/<name>/                       # shared skill, used by every platform
 platforms/<platform>/skills/<name>/  # optional per-platform override or platform-only skill
 template/SKILL.md                    # starting point for `new`
 tools/skills.py                      # validate, new, install, uninstall
+mcp/<server>/                        # MCP servers (one per folder, shared by all platforms)
 ```
 
 All six platforms read the same `SKILL.md` format, so a skill lives in `skills/` unless it must differ on one platform. See [platforms/README.md](platforms/README.md) for how overrides work, and each platform's README for its folders and extra frontmatter.
@@ -27,6 +62,8 @@ All six platforms read the same `SKILL.md` format, so a skill lives in `skills/`
 ## Requirements
 
 [uv](https://docs.astral.sh/uv/). The CLI declares its own dependency (PyYAML), and uv installs it on first run.
+
+To run every development check (see AGENTS.md): Node.js 22+, [Luau](https://github.com/luau-lang/luau/releases), and [Rojo](https://rojo.space) 7.2+.
 
 ## Install
 
@@ -86,4 +123,4 @@ Warnings (these fail with `--strict`):
 - Scripts that have a shebang but are not executable.
 - Codex's combined descriptions over 8,000 chars (its skill-list budget).
 
-CI runs the validator's tests and `validate --strict` on every push and pull request.
+CI runs the validator's tests, the tests for every skill script and library (Python, JavaScript, and Luau, plus strict Luau type checks and a real Rojo build), an MCP smoke test, and `validate --strict` on every push and pull request.

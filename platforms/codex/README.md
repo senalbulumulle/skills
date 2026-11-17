@@ -6,3 +6,4 @@
 - Extra file: `agents/openai.yaml` (UI name and icons, `policy.allow_implicit_invocation`, MCP tool dependencies). Other platforms ignore it, so it can live in the shared skill.
 - Note: Gemini CLI, Copilot, Cursor, and OpenCode also read `~/.agents/skills/`.
 - Docs: https://developers.openai.com/codex/skills
+- MCP servers: see `mcp/` (for example `mcp/roblox-forge/README.md` for Codex setup).

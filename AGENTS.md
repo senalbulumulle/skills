@@ -21,9 +21,18 @@ Skills here must work in Claude Code, Codex, Gemini CLI, GitHub Copilot, Cursor,
 
 ## Before committing
 
-Run both, and fix every failure:
+Run all of these, and fix every failure (Luau and Rojo are needed for the Roblox checks):
 
 ```sh
 tools/skills.py validate --strict
 uv run --with pyyaml python -m unittest discover -s tools
+node --test tools/test_game_assets.test.mjs
+luau tools/luau/test_roblox_modules.luau
+uv run --python 3.12 --with mcp==2.3.0 python tools/mcp_smoke.py
 ```
+
+Every script or library added under a skill's `scripts/` or `assets/` needs tests in `tools/` (`test_game_scripts.py` for Python, `test_game_assets.test.mjs` for JavaScript, `luau/test_roblox_modules.luau` for Luau). Pure Luau modules must also pass `luau-analyze --mode=strict` (listed in the CI workflow).
+
+## MCP servers
+
+MCP servers live in `mcp/<name>/`: tool logic in a standard-library module with unit tests, a thin `server.py` that registers tools, and a README with setup for Claude Code and Codex. One server serves every platform; only registration differs.
