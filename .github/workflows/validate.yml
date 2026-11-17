@@ -1,0 +1,16 @@
+name: validate
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Test the validator
+        run: uv run --with pyyaml python -m unittest discover -s tools -v
+      - name: Validate skills
+        run: tools/skills.py validate --strict
