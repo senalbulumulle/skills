@@ -9,6 +9,6 @@
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_common.sh"
 
-need uv "Install it from https://docs.astral.sh/uv/ (the skills CLI runs through uv)."
+need_uv
 "$REPO_ROOT/tools/skills.py" install -p codex "$@"
 info "Codex skills are in $HOME/.agents/skills. Start a new Codex session and type \$ or /skills to see them."

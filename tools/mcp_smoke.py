@@ -1,4 +1,4 @@
-"""End-to-end smoke test for the roblox-forge MCP server over stdio, using the official MCP client.
+"""End-to-end smoke test for this repo's MCP servers over stdio, using the official MCP client.
 
 Run: uv run --python 3.12 --with mcp==2.3.0 python tools/mcp_smoke.py
 Exits non-zero on any failure.
@@ -12,8 +12,11 @@ from pathlib import Path
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-SERVER = Path(__file__).resolve().parent.parent / "mcp" / "roblox-forge" / "server.py"
+MCP = Path(__file__).resolve().parent.parent / "mcp"
+SERVER = MCP / "roblox-forge" / "server.py"
 EXPECTED = {"create_project", "check_project", "audit_remotes", "check_odds", "datastore_budget", "luau_check"}
+DIRECTOR = MCP / "creative-director" / "server.py"
+DIRECTOR_TOOLS = {"concept_seeds", "review_design", "find_slop"}
 
 
 def payload(result):
@@ -25,10 +28,13 @@ def payload(result):
     return json.loads(result.content[0].text)
 
 
-async def main():
+def launch(server: Path) -> StdioServerParameters:
     # Launch exactly the way users register it: uv resolves Python and the pinned SDK from the script header.
-    params = StdioServerParameters(command="uv", args=["run", "--quiet", "--script", str(SERVER)])
-    async with stdio_client(params) as (read, write):
+    return StdioServerParameters(command="uv", args=["run", "--quiet", "--script", str(server)])
+
+
+async def roblox_forge():
+    async with stdio_client(launch(SERVER)) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
             tools = {t.name: t for t in (await session.list_tools()).tools}
@@ -51,6 +57,30 @@ async def main():
             budget = payload(await session.call_tool("datastore_budget", {"players": 20}))
             assert budget["budget_per_minute"] == 860, budget
             print(f"roblox-forge smoke test passed: {len(tools)} tools; rojo_build={checked['rojo_build']}")
+
+
+async def creative_director():
+    async with stdio_client(launch(DIRECTOR)) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            tools = {t.name: t for t in (await session.list_tools()).tools}
+            assert DIRECTOR_TOOLS <= set(tools), f"missing tools: {DIRECTOR_TOOLS - set(tools)}"
+            assert tools["find_slop"].annotations.read_only_hint is True
+
+            seeds = payload(await session.call_tool("concept_seeds", {"count": 2, "seed": 7}))
+            assert seeds["ok"] and seeds["seed"] == 7 and len(seeds["concepts"]) == 2, seeds
+            review = payload(await session.call_tool("review_design", {"text": "# Pitch\nA game.\n"}))
+            assert not review["ok"] and review["sections"]["fantasy"] == "Pitch", review
+            with tempfile.TemporaryDirectory() as tmp:
+                (Path(tmp) / "ui.js").write_text('title = "My ' + 'Game";\n')
+                slop = payload(await session.call_tool("find_slop", {"paths": [tmp]}))
+            assert [f["rule"] for f in slop["findings"]] == ["generic-title"], slop
+            print(f"creative-director smoke test passed: {len(tools)} tools")
+
+
+async def main():
+    await roblox_forge()
+    await creative_director()
 
 
 if __name__ == "__main__":

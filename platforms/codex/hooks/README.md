@@ -1,13 +1,16 @@
 # Codex game-dev hooks
 
-Engine-aware [Codex hooks](https://developers.openai.com/codex/hooks) for game projects. They detect the engine from the project files and apply that engine's rules. Outside a game project they do nothing.
+Engine-aware [Codex hooks](https://developers.openai.com/codex/hooks) for game projects. They detect the engine from the project files and apply that engine's rules. Two checks run in every project: a creative brief for game requests, and an unfinished-content check at `Stop`.
 
 | Event | What it does |
 | --- | --- |
 | `SessionStart` | Adds a short rule sheet for the detected engine and version (about 5 lines) to the model's context |
+| `UserPromptSubmit` | When a prompt asks to make or change a game, adds a four-sentence creative brief: one specific idea with a hook, concrete names and numbers, a playable version first, feedback on every action, and verification before finishing. Words like "level" or "weapon" count only inside a game project |
 | `PreToolUse` (`Bash`, `apply_patch`) | Blocks publishing, text edits to binary assets, edits to generated folders, and deletes of core project data. Adds notes for Unity `.meta` handling |
 | `PostToolUse` (`apply_patch`) | Runs the engine checks on the patched files and returns any errors and warnings to the model |
-| `Stop` | Blocks the stop once if git-changed files still have check errors, so the agent fixes them or explains why they stay. It never loops, and warnings never block |
+| `Stop` | Blocks the stop once if git-changed files still have engine check errors, or if lines added since the last commit look unfinished or generic. The agent then fixes them or explains why they stay. It never loops, and warnings never block |
+
+The unfinished-content check flags filler text, a TODO or FIXME whose note says to implement, stub, or replace something, stubs that throw "not implemented" (C#, JavaScript, Rust), stand-in UI text, and generic titles. It skips test files, fixtures, lockfiles, and minified files, and it ignores ordinary TODOs and Python's `NotImplementedError`, which abstract methods use. The rules are the same as the creative-director MCP server's `find_slop`, and a test keeps them identical.
 
 ## Engines
 
@@ -61,5 +64,5 @@ Codex 0.163.0 findings, from the binary and a live run, that the docs don't make
 ## Development
 
 - `game_hooks.py` is standard library only. Every internal error exits 0 with no output, so a hook bug never blocks the agent.
-- Tests: `python3 -m unittest tools/test_codex_hooks.py`. They cover every engine, guard, and check, plus the installer and the discovery parser. The snapshot test runs only when Codex 0.163.0 is installed.
+- Tests: `python3 -m unittest tools/test_codex_hooks.py`. They cover every engine, guard, and check, the creative brief and the unfinished-content check, plus the installer and the discovery parser. The snapshot test runs only when Codex 0.163.0 is installed.
 - When Codex updates, run `discover.py --diff` against the latest snapshot. If anything changed, save a new snapshot (`discover.py --json > snapshots/codex-<version>.json`) and adjust the hooks.

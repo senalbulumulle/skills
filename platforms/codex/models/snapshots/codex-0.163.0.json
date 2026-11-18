@@ -1,0 +1,1659 @@
+{
+  "client_version": "0.163.0",
+  "models": [
+    {
+      "slug": "gpt-6.1-terra",
+      "settings": {
+        "display_name": "GPT-6.1 Terra",
+        "description": "Efficient model that excels at visual understanding and computer use.",
+        "visibility": "list",
+        "priority": 1,
+        "default_reasoning_level": "low",
+        "reasoning_levels": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max",
+          "ultra"
+        ],
+        "context_window": 500000,
+        "max_context_window": 872000,
+        "default_verbosity": "low",
+        "default_reasoning_summary": "none",
+        "tool_mode": "code_mode_only",
+        "shell_type": "unified_exec",
+        "apply_patch_tool_type": "freeform",
+        "web_search_tool_type": "text_and_image",
+        "multi_agent_version": "v2",
+        "multi_agent_reasoning_effort": "xhigh",
+        "experimental_supported_tools": [
+          "send_user_message_async",
+          "clock"
+        ],
+        "input_modalities": [
+          "text",
+          "image"
+        ],
+        "truncation_policy": {
+          "mode": "tokens",
+          "limit": 10000
+        },
+        "additional_speed_tiers": [
+          "fast"
+        ]
+      },
+      "instructions": {
+        "chars": 21175,
+        "sha": "4ddce5803b63",
+        "sections": [
+          {
+            "heading": "# When to ask the user for permission",
+            "chars": 2094,
+            "sha": "a88ca0700faa"
+          },
+          {
+            "heading": "# Autonomy and persistence",
+            "chars": 1705,
+            "sha": "7db68f9104b2"
+          },
+          {
+            "heading": "# Personality",
+            "chars": 336,
+            "sha": "39a3e77e2a71"
+          },
+          {
+            "heading": "## Writing style",
+            "chars": 1870,
+            "sha": "0fef63e435cd"
+          },
+          {
+            "heading": "## Technical communication",
+            "chars": 1034,
+            "sha": "191ebc6b3c3f"
+          },
+          {
+            "heading": "### Writing PR descriptions",
+            "chars": 660,
+            "sha": "fd79c5785dec"
+          },
+          {
+            "heading": "# Working with the user",
+            "chars": 2846,
+            "sha": "838196920cb8"
+          },
+          {
+            "heading": "## Intermediate commentary",
+            "chars": 1067,
+            "sha": "1ebc4151aa89"
+          },
+          {
+            "heading": "## Final answer",
+            "chars": 79,
+            "sha": "f27940588230"
+          },
+          {
+            "heading": "### Formatting rules",
+            "chars": 1160,
+            "sha": "476ea9620893"
+          },
+          {
+            "heading": "### Visualizations",
+            "chars": 1020,
+            "sha": "2bcfbeeca287"
+          },
+          {
+            "heading": "# Rules for getting work done",
+            "chars": 2609,
+            "sha": "8717bb278fc6"
+          },
+          {
+            "heading": "# Using skills",
+            "chars": 1366,
+            "sha": "0352a05a6e59"
+          },
+          {
+            "heading": "## When to use a skill",
+            "chars": 643,
+            "sha": "5d9065d369a3"
+          },
+          {
+            "heading": "## How to use skills",
+            "chars": 772,
+            "sha": "8917e5684fb2"
+          },
+          {
+            "heading": "# Plugins and Apps",
+            "chars": 367,
+            "sha": "9517862d7962"
+          },
+          {
+            "heading": "## Decision Boundary",
+            "chars": 939,
+            "sha": "d6615edfb514"
+          }
+        ]
+      },
+      "messages": {
+        "persistent_instructions": {
+          "chars": 5737,
+          "sha": "30747e79e50e"
+        },
+        "approvals.on_request_auto_review": {
+          "chars": 479,
+          "sha": "65dddb8b4bb8"
+        },
+        "collaboration_modes.default": {
+          "chars": 1015,
+          "sha": "fe4838821336"
+        },
+        "auto_review.rejection_instructions": {
+          "chars": 388,
+          "sha": "fc210b5bc033"
+        },
+        "multi_agent.role.root": {
+          "chars": 1101,
+          "sha": "4c86e7411c24"
+        },
+        "multi_agent.role.subagent": {
+          "chars": 1154,
+          "sha": "3651a6dee071"
+        },
+        "token_budget.enabled": {
+          "value": false
+        },
+        "token_budget.use_history_notes_extension": {
+          "value": false
+        },
+        "token_budget.reminder_threshold_tokens": {
+          "value": 6144
+        },
+        "token_budget.reminder_message_template": {
+          "chars": 926,
+          "sha": "840af84260ef"
+        },
+        "token_budget.guidance_message": {
+          "chars": 1597,
+          "sha": "797a67f14b57"
+        },
+        "token_budget.auto_compact_fallback_prompt": {
+          "chars": 785,
+          "sha": "2c97b42df753"
+        },
+        "token_budget.auto_compact_fallback_buffer_tokens": {
+          "value": 16384
+        },
+        "guardian_v2.classifier_instructions": {
+          "chars": 3655,
+          "sha": "1edad6a16d94"
+        },
+        "confirmation_policies.browser_use": {
+          "chars": 11777,
+          "sha": "c106250030a4"
+        },
+        "confirmation_policies.computer_use": {
+          "chars": 11777,
+          "sha": "c106250030a4"
+        }
+      }
+    },
+    {
+      "slug": "gpt-reserve",
+      "settings": {
+        "display_name": "GPT-Reserve",
+        "description": "Fast and affordable agentic coding model.",
+        "visibility": "hide",
+        "priority": 2,
+        "default_reasoning_level": "medium",
+        "reasoning_levels": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ],
+        "context_window": 272000,
+        "max_context_window": 872000,
+        "default_verbosity": "low",
+        "default_reasoning_summary": "none",
+        "tool_mode": "code_mode_only",
+        "shell_type": "unified_exec",
+        "apply_patch_tool_type": "freeform",
+        "web_search_tool_type": "text_and_image",
+        "multi_agent_version": "v1",
+        "multi_agent_reasoning_effort": null,
+        "experimental_supported_tools": [],
+        "input_modalities": [
+          "text",
+          "image"
+        ],
+        "truncation_policy": {
+          "mode": "tokens",
+          "limit": 10000
+        },
+        "additional_speed_tiers": [
+          "fast"
+        ]
+      },
+      "instructions": {
+        "chars": 17730,
+        "sha": "a91357a1cd27",
+        "sections": [
+          {
+            "heading": "# Personality",
+            "chars": 847,
+            "sha": "f12c69337a55"
+          },
+          {
+            "heading": "## Writing style",
+            "chars": 498,
+            "sha": "4875aeb8a277"
+          },
+          {
+            "heading": "## Technical communication",
+            "chars": 669,
+            "sha": "da1ae5d777c5"
+          },
+          {
+            "heading": "# Working with the user",
+            "chars": 1432,
+            "sha": "51e6a539689d"
+          },
+          {
+            "heading": "## Intermediate commentary",
+            "chars": 1315,
+            "sha": "90184871ab43"
+          },
+          {
+            "heading": "## Final answer",
+            "chars": 189,
+            "sha": "5cc51af35557"
+          },
+          {
+            "heading": "### Formatting rules",
+            "chars": 842,
+            "sha": "e20afb47e456"
+          },
+          {
+            "heading": "### Visualizations",
+            "chars": 968,
+            "sha": "f4ff1119751f"
+          },
+          {
+            "heading": "# Rules for getting work done",
+            "chars": 1070,
+            "sha": "f3725944525a"
+          },
+          {
+            "heading": "## File editing constraints",
+            "chars": 788,
+            "sha": "315f644672cd"
+          },
+          {
+            "heading": "## Autonomy and persistence",
+            "chars": 2662,
+            "sha": "240118db639b"
+          },
+          {
+            "heading": "# Destructive actions",
+            "chars": 1256,
+            "sha": "920899489a43"
+          },
+          {
+            "heading": "# Using skills",
+            "chars": 170,
+            "sha": "68760bd7d648"
+          },
+          {
+            "heading": "### How to use skills",
+            "chars": 4514,
+            "sha": "146effb82bbf"
+          }
+        ]
+      },
+      "messages": {
+        "token_budget.enabled": {
+          "value": false
+        },
+        "token_budget.use_history_notes_extension": {
+          "value": false
+        },
+        "token_budget.reminder_threshold_tokens": {
+          "value": 6144
+        },
+        "token_budget.reminder_message_template": {
+          "chars": 926,
+          "sha": "840af84260ef"
+        },
+        "token_budget.guidance_message": {
+          "chars": 1597,
+          "sha": "797a67f14b57"
+        },
+        "token_budget.auto_compact_fallback_prompt": {
+          "chars": 785,
+          "sha": "2c97b42df753"
+        },
+        "token_budget.auto_compact_fallback_buffer_tokens": {
+          "value": 16384
+        }
+      }
+    },
+    {
+      "slug": "gpt-6.1-sol",
+      "settings": {
+        "display_name": "GPT-6.1-Sol",
+        "description": "Previous generation model for coding and everyday work.",
+        "visibility": "list",
+        "priority": 3,
+        "default_reasoning_level": "low",
+        "reasoning_levels": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max",
+          "ultra"
+        ],
+        "context_window": 500000,
+        "max_context_window": 872000,
+        "default_verbosity": "low",
+        "default_reasoning_summary": "none",
+        "tool_mode": "code_mode_only",
+        "shell_type": "unified_exec",
+        "apply_patch_tool_type": "freeform",
+        "web_search_tool_type": "text_and_image",
+        "multi_agent_version": "v2",
+        "multi_agent_reasoning_effort": "xhigh",
+        "experimental_supported_tools": [
+          "send_user_message_async",
+          "clock"
+        ],
+        "input_modalities": [
+          "text",
+          "image"
+        ],
+        "truncation_policy": {
+          "mode": "tokens",
+          "limit": 10000
+        },
+        "additional_speed_tiers": [
+          "fast"
+        ]
+      },
+      "instructions": {
+        "chars": 21524,
+        "sha": "d12e6dbdfd4a",
+        "sections": [
+          {
+            "heading": "# When to ask the user for permission",
+            "chars": 2094,
+            "sha": "a88ca0700faa"
+          },
+          {
+            "heading": "# Autonomy and persistence",
+            "chars": 1705,
+            "sha": "7db68f9104b2"
+          },
+          {
+            "heading": "# Personality",
+            "chars": 336,
+            "sha": "39a3e77e2a71"
+          },
+          {
+            "heading": "## Writing style",
+            "chars": 2218,
+            "sha": "6804bebe80bc"
+          },
+          {
+            "heading": "## Technical communication",
+            "chars": 1034,
+            "sha": "191ebc6b3c3f"
+          },
+          {
+            "heading": "### Writing PR descriptions",
+            "chars": 660,
+            "sha": "fd79c5785dec"
+          },
+          {
+            "heading": "# Working with the user",
+            "chars": 2846,
+            "sha": "838196920cb8"
+          },
+          {
+            "heading": "## Intermediate commentary",
+            "chars": 1067,
+            "sha": "1ebc4151aa89"
+          },
+          {
+            "heading": "## Final answer",
+            "chars": 79,
+            "sha": "f27940588230"
+          },
+          {
+            "heading": "### Formatting rules",
+            "chars": 1160,
+            "sha": "476ea9620893"
+          },
+          {
+            "heading": "### Visualizations",
+            "chars": 1020,
+            "sha": "2bcfbeeca287"
+          },
+          {
+            "heading": "# Rules for getting work done",
+            "chars": 2609,
+            "sha": "8717bb278fc6"
+          },
+          {
+            "heading": "# Using skills",
+            "chars": 1366,
+            "sha": "0352a05a6e59"
+          },
+          {
+            "heading": "## When to use a skill",
+            "chars": 643,
+            "sha": "5d9065d369a3"
+          },
+          {
+            "heading": "## How to use skills",
+            "chars": 772,
+            "sha": "8917e5684fb2"
+          },
+          {
+            "heading": "# Plugins and Apps",
+            "chars": 367,
+            "sha": "9517862d7962"
+          },
+          {
+            "heading": "## Decision Boundary",
+            "chars": 939,
+            "sha": "d6615edfb514"
+          }
+        ]
+      },
+      "messages": {
+        "persistent_instructions": {
+          "chars": 5737,
+          "sha": "30747e79e50e"
+        },
+        "approvals.on_request_auto_review": {
+          "chars": 479,
+          "sha": "65dddb8b4bb8"
+        },
+        "collaboration_modes.default": {
+          "chars": 1015,
+          "sha": "fe4838821336"
+        },
+        "auto_review.rejection_instructions": {
+          "chars": 388,
+          "sha": "fc210b5bc033"
+        },
+        "multi_agent.role.root": {
+          "chars": 1101,
+          "sha": "4c86e7411c24"
+        },
+        "multi_agent.role.subagent": {
+          "chars": 1154,
+          "sha": "3651a6dee071"
+        },
+        "token_budget.enabled": {
+          "value": false
+        },
+        "token_budget.use_history_notes_extension": {
+          "value": false
+        },
+        "token_budget.reminder_threshold_tokens": {
+          "value": 6144
+        },
+        "token_budget.reminder_message_template": {
+          "chars": 926,
+          "sha": "840af84260ef"
+        },
+        "token_budget.guidance_message": {
+          "chars": 1597,
+          "sha": "797a67f14b57"
+        },
+        "token_budget.auto_compact_fallback_prompt": {
+          "chars": 785,
+          "sha": "2c97b42df753"
+        },
+        "token_budget.auto_compact_fallback_buffer_tokens": {
+          "value": 16384
+        },
+        "guardian_v2.classifier_instructions": {
+          "chars": 3655,
+          "sha": "1edad6a16d94"
+        },
+        "confirmation_policies.browser_use": {
+          "chars": 11777,
+          "sha": "c106250030a4"
+        },
+        "confirmation_policies.computer_use": {
+          "chars": 11777,
+          "sha": "c106250030a4"
+        }
+      }
+    },
+    {
+      "slug": "gpt-6-astra",
+      "settings": {
+        "display_name": "GPT-6-Astra",
+        "description": "Previous generation model for complex coding and professional work.",
+        "visibility": "list",
+        "priority": 4,
+        "default_reasoning_level": "medium",
+        "reasoning_levels": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max",
+          "ultra"
+        ],
+        "context_window": 272000,
+        "max_context_window": 872000,
+        "default_verbosity": "low",
+        "default_reasoning_summary": "none",
+        "tool_mode": "code_mode_only",
+        "shell_type": "unified_exec",
+        "apply_patch_tool_type": "freeform",
+        "web_search_tool_type": "text_and_image",
+        "multi_agent_version": "v2",
+        "multi_agent_reasoning_effort": "xhigh",
+        "experimental_supported_tools": [
+          "send_user_message_async",
+          "clock"
+        ],
+        "input_modalities": [
+          "text",
+          "image"
+        ],
+        "truncation_policy": {
+          "mode": "tokens",
+          "limit": 10000
+        },
+        "additional_speed_tiers": [
+          "fast"
+        ]
+      },
+      "instructions": {
+        "chars": 21175,
+        "sha": "4ddce5803b63",
+        "sections": [
+          {
+            "heading": "# When to ask the user for permission",
+            "chars": 2094,
+            "sha": "a88ca0700faa"
+          },
+          {
+            "heading": "# Autonomy and persistence",
+            "chars": 1705,
+            "sha": "7db68f9104b2"
+          },
+          {
+            "heading": "# Personality",
+            "chars": 336,
+            "sha": "39a3e77e2a71"
+          },
+          {
+            "heading": "## Writing style",
+            "chars": 1870,
+            "sha": "0fef63e435cd"
+          },
+          {
+            "heading": "## Technical communication",
+            "chars": 1034,
+            "sha": "191ebc6b3c3f"
+          },
+          {
+            "heading": "### Writing PR descriptions",
+            "chars": 660,
+            "sha": "fd79c5785dec"
+          },
+          {
+            "heading": "# Working with the user",
+            "chars": 2846,
+            "sha": "838196920cb8"
+          },
+          {
+            "heading": "## Intermediate commentary",
+            "chars": 1067,
+            "sha": "1ebc4151aa89"
+          },
+          {
+            "heading": "## Final answer",
+            "chars": 79,
+            "sha": "f27940588230"
+          },
+          {
+            "heading": "### Formatting rules",
+            "chars": 1160,
+            "sha": "476ea9620893"
+          },
+          {
+            "heading": "### Visualizations",
+            "chars": 1020,
+            "sha": "2bcfbeeca287"
+          },
+          {
+            "heading": "# Rules for getting work done",
+            "chars": 2609,
+            "sha": "8717bb278fc6"
+          },
+          {
+            "heading": "# Using skills",
+            "chars": 1366,
+            "sha": "0352a05a6e59"
+          },
+          {
+            "heading": "## When to use a skill",
+            "chars": 643,
+            "sha": "5d9065d369a3"
+          },
+          {
+            "heading": "## How to use skills",
+            "chars": 772,
+            "sha": "8917e5684fb2"
+          },
+          {
+            "heading": "# Plugins and Apps",
+            "chars": 367,
+            "sha": "9517862d7962"
+          },
+          {
+            "heading": "## Decision Boundary",
+            "chars": 939,
+            "sha": "d6615edfb514"
+          }
+        ]
+      },
+      "messages": {
+        "persistent_instructions": {
+          "chars": 5737,
+          "sha": "30747e79e50e"
+        },
+        "approvals.on_request_auto_review": {
+          "chars": 479,
+          "sha": "65dddb8b4bb8"
+        },
+        "collaboration_modes.default": {
+          "chars": 1015,
+          "sha": "fe4838821336"
+        },
+        "auto_review.rejection_instructions": {
+          "chars": 388,
+          "sha": "fc210b5bc033"
+        },
+        "multi_agent.role.root": {
+          "chars": 1101,
+          "sha": "4c86e7411c24"
+        },
+        "multi_agent.role.subagent": {
+          "chars": 1154,
+          "sha": "3651a6dee071"
+        },
+        "token_budget.enabled": {
+          "value": false
+        },
+        "token_budget.use_history_notes_extension": {
+          "value": false
+        },
+        "token_budget.reminder_threshold_tokens": {
+          "value": 6144
+        },
+        "token_budget.reminder_message_template": {
+          "chars": 926,
+          "sha": "840af84260ef"
+        },
+        "token_budget.guidance_message": {
+          "chars": 1597,
+          "sha": "797a67f14b57"
+        },
+        "token_budget.auto_compact_fallback_prompt": {
+          "chars": 785,
+          "sha": "2c97b42df753"
+        },
+        "token_budget.auto_compact_fallback_buffer_tokens": {
+          "value": 16384
+        },
+        "guardian_v2.classifier_instructions": {
+          "chars": 3655,
+          "sha": "1edad6a16d94"
+        },
+        "confirmation_policies.browser_use": {
+          "chars": 11777,
+          "sha": "c106250030a4"
+        },
+        "confirmation_policies.computer_use": {
+          "chars": 11777,
+          "sha": "c106250030a4"
+        }
+      }
+    },
+    {
+      "slug": "gpt-6-sol",
+      "settings": {
+        "display_name": "GPT-6-Sol",
+        "description": "Legacy model for coding and everyday work.",
+        "visibility": "list",
+        "priority": 5,
+        "default_reasoning_level": "medium",
+        "reasoning_levels": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max",
+          "ultra"
+        ],
+        "context_window": 272000,
+        "max_context_window": 872000,
+        "default_verbosity": "low",
+        "default_reasoning_summary": "none",
+        "tool_mode": "code_mode_only",
+        "shell_type": "unified_exec",
+        "apply_patch_tool_type": "freeform",
+        "web_search_tool_type": "text_and_image",
+        "multi_agent_version": "v2",
+        "multi_agent_reasoning_effort": null,
+        "experimental_supported_tools": [
+          "send_user_message_async",
+          "clock"
+        ],
+        "input_modalities": [
+          "text",
+          "image"
+        ],
+        "truncation_policy": {
+          "mode": "tokens",
+          "limit": 10000
+        },
+        "additional_speed_tiers": [
+          "fast"
+        ]
+      },
+      "instructions": {
+        "chars": 18748,
+        "sha": "a8567d97e0fb",
+        "sections": [
+          {
+            "heading": "# Personality",
+            "chars": 286,
+            "sha": "83e3305d189d"
+          },
+          {
+            "heading": "## Writing style",
+            "chars": 1546,
+            "sha": "bd2717cb4ee6"
+          },
+          {
+            "heading": "# When to ask the user for permission",
+            "chars": 1811,
+            "sha": "2287ca70c9b9"
+          },
+          {
+            "heading": "# Autonomy and persistence",
+            "chars": 1416,
+            "sha": "c500ecb3e76c"
+          },
+          {
+            "heading": "# Working with the user",
+            "chars": 2830,
+            "sha": "27a773965dad"
+          },
+          {
+            "heading": "## Intermediate commentary",
+            "chars": 1109,
+            "sha": "556a3f26945a"
+          },
+          {
+            "heading": "## Final answer",
+            "chars": 79,
+            "sha": "f27940588230"
+          },
+          {
+            "heading": "### Formatting rules",
+            "chars": 1160,
+            "sha": "476ea9620893"
+          },
+          {
+            "heading": "### Visualizations",
+            "chars": 1017,
+            "sha": "11884bf8bba3"
+          },
+          {
+            "heading": "# Rules for getting work done",
+            "chars": 3049,
+            "sha": "a9a45c063c9a"
+          },
+          {
+            "heading": "# Using skills",
+            "chars": 1178,
+            "sha": "60ed2bc88667"
+          },
+          {
+            "heading": "## When to use a skill",
+            "chars": 643,
+            "sha": "5d9065d369a3"
+          },
+          {
+            "heading": "## How to use skills",
+            "chars": 772,
+            "sha": "8917e5684fb2"
+          },
+          {
+            "heading": "# Plugins and Apps",
+            "chars": 367,
+            "sha": "9517862d7962"
+          },
+          {
+            "heading": "## Decision Boundary",
+            "chars": 939,
+            "sha": "d6615edfb514"
+          }
+        ]
+      },
+      "messages": {
+        "persistent_instructions": {
+          "chars": 5737,
+          "sha": "30747e79e50e"
+        },
+        "approvals.on_request_auto_review": {
+          "chars": 479,
+          "sha": "65dddb8b4bb8"
+        },
+        "collaboration_modes.default": {
+          "chars": 1015,
+          "sha": "fe4838821336"
+        },
+        "auto_review.rejection_instructions": {
+          "chars": 388,
+          "sha": "fc210b5bc033"
+        },
+        "multi_agent.role.root": {
+          "chars": 1101,
+          "sha": "4c86e7411c24"
+        },
+        "multi_agent.role.subagent": {
+          "chars": 1154,
+          "sha": "3651a6dee071"
+        },
+        "token_budget.enabled": {
+          "value": false
+        },
+        "token_budget.use_history_notes_extension": {
+          "value": false
+        },
+        "token_budget.reminder_threshold_tokens": {
+          "value": 6144
+        },
+        "token_budget.reminder_message_template": {
+          "chars": 926,
+          "sha": "840af84260ef"
+        },
+        "token_budget.guidance_message": {
+          "chars": 1597,
+          "sha": "797a67f14b57"
+        },
+        "token_budget.auto_compact_fallback_prompt": {
+          "chars": 785,
+          "sha": "2c97b42df753"
+        },
+        "token_budget.auto_compact_fallback_buffer_tokens": {
+          "value": 16384
+        },
+        "guardian_v2.classifier_instructions": {
+          "chars": 3655,
+          "sha": "1edad6a16d94"
+        },
+        "confirmation_policies.browser_use": {
+          "chars": 11777,
+          "sha": "c106250030a4"
+        },
+        "confirmation_policies.computer_use": {
+          "chars": 11777,
+          "sha": "c106250030a4"
+        }
+      }
+    },
+    {
+      "slug": "gpt-6-luna",
+      "settings": {
+        "display_name": "GPT-6-Luna",
+        "description": "Fast and affordable model for easier tasks.",
+        "visibility": "list",
+        "priority": 6,
+        "default_reasoning_level": "medium",
+        "reasoning_levels": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ],
+        "context_window": 272000,
+        "max_context_window": 872000,
+        "default_verbosity": "low",
+        "default_reasoning_summary": "none",
+        "tool_mode": "code_mode_only",
+        "shell_type": "unified_exec",
+        "apply_patch_tool_type": "freeform",
+        "web_search_tool_type": "text_and_image",
+        "multi_agent_version": "v2",
+        "multi_agent_reasoning_effort": null,
+        "experimental_supported_tools": [
+          "send_user_message_async",
+          "clock"
+        ],
+        "input_modalities": [
+          "text",
+          "image"
+        ],
+        "truncation_policy": {
+          "mode": "tokens",
+          "limit": 10000
+        },
+        "additional_speed_tiers": [
+          "fast"
+        ]
+      },
+      "instructions": {
+        "chars": 17793,
+        "sha": "e52174f354e3",
+        "sections": [
+          {
+            "heading": "# Personality",
+            "chars": 286,
+            "sha": "83e3305d189d"
+          },
+          {
+            "heading": "## Writing style",
+            "chars": 1546,
+            "sha": "bd2717cb4ee6"
+          },
+          {
+            "heading": "# When to ask the user for permission",
+            "chars": 1659,
+            "sha": "0145c779415a"
+          },
+          {
+            "heading": "# Autonomy and persistence",
+            "chars": 1416,
+            "sha": "c500ecb3e76c"
+          },
+          {
+            "heading": "# Working with the user",
+            "chars": 2830,
+            "sha": "27a773965dad"
+          },
+          {
+            "heading": "## Intermediate commentary",
+            "chars": 1109,
+            "sha": "556a3f26945a"
+          },
+          {
+            "heading": "## Final answer",
+            "chars": 79,
+            "sha": "f27940588230"
+          },
+          {
+            "heading": "### Formatting rules",
+            "chars": 1160,
+            "sha": "476ea9620893"
+          },
+          {
+            "heading": "### Visualizations",
+            "chars": 1017,
+            "sha": "11884bf8bba3"
+          },
+          {
+            "heading": "# Rules for getting work done",
+            "chars": 2247,
+            "sha": "9272cb82c66a"
+          },
+          {
+            "heading": "# Using skills",
+            "chars": 1178,
+            "sha": "60ed2bc88667"
+          },
+          {
+            "heading": "## When to use a skill",
+            "chars": 643,
+            "sha": "5d9065d369a3"
+          },
+          {
+            "heading": "## How to use skills",
+            "chars": 772,
+            "sha": "8917e5684fb2"
+          },
+          {
+            "heading": "# Plugins and Apps",
+            "chars": 367,
+            "sha": "9517862d7962"
+          },
+          {
+            "heading": "## Decision Boundary",
+            "chars": 939,
+            "sha": "d6615edfb514"
+          }
+        ]
+      },
+      "messages": {
+        "persistent_instructions": {
+          "chars": 5737,
+          "sha": "30747e79e50e"
+        },
+        "approvals.on_request_auto_review": {
+          "chars": 479,
+          "sha": "65dddb8b4bb8"
+        },
+        "collaboration_modes.default": {
+          "chars": 1015,
+          "sha": "fe4838821336"
+        },
+        "auto_review.rejection_instructions": {
+          "chars": 388,
+          "sha": "fc210b5bc033"
+        },
+        "multi_agent.role.root": {
+          "chars": 1101,
+          "sha": "4c86e7411c24"
+        },
+        "multi_agent.role.subagent": {
+          "chars": 1154,
+          "sha": "3651a6dee071"
+        },
+        "token_budget.enabled": {
+          "value": false
+        },
+        "token_budget.use_history_notes_extension": {
+          "value": false
+        },
+        "token_budget.reminder_threshold_tokens": {
+          "value": 6144
+        },
+        "token_budget.reminder_message_template": {
+          "chars": 926,
+          "sha": "840af84260ef"
+        },
+        "token_budget.guidance_message": {
+          "chars": 1597,
+          "sha": "797a67f14b57"
+        },
+        "token_budget.auto_compact_fallback_prompt": {
+          "chars": 785,
+          "sha": "2c97b42df753"
+        },
+        "token_budget.auto_compact_fallback_buffer_tokens": {
+          "value": 16384
+        },
+        "guardian_v2.classifier_instructions": {
+          "chars": 3655,
+          "sha": "1edad6a16d94"
+        },
+        "confirmation_policies.browser_use": {
+          "chars": 11777,
+          "sha": "c106250030a4"
+        },
+        "confirmation_policies.computer_use": {
+          "chars": 11777,
+          "sha": "c106250030a4"
+        }
+      }
+    },
+    {
+      "slug": "gpt-5.6-sol",
+      "settings": {
+        "display_name": "GPT-5.6-Sol",
+        "description": "Legacy model for coding and everyday work.",
+        "visibility": "list",
+        "priority": 7,
+        "default_reasoning_level": "low",
+        "reasoning_levels": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max",
+          "ultra"
+        ],
+        "context_window": 272000,
+        "max_context_window": 872000,
+        "default_verbosity": "low",
+        "default_reasoning_summary": "none",
+        "tool_mode": "code_mode_only",
+        "shell_type": "unified_exec",
+        "apply_patch_tool_type": "freeform",
+        "web_search_tool_type": "text_and_image",
+        "multi_agent_version": "v2",
+        "multi_agent_reasoning_effort": null,
+        "experimental_supported_tools": [],
+        "input_modalities": [
+          "text",
+          "image"
+        ],
+        "truncation_policy": {
+          "mode": "tokens",
+          "limit": 10000
+        },
+        "additional_speed_tiers": [
+          "fast"
+        ]
+      },
+      "instructions": {
+        "chars": 17730,
+        "sha": "a91357a1cd27",
+        "sections": [
+          {
+            "heading": "# Personality",
+            "chars": 847,
+            "sha": "f12c69337a55"
+          },
+          {
+            "heading": "## Writing style",
+            "chars": 498,
+            "sha": "4875aeb8a277"
+          },
+          {
+            "heading": "## Technical communication",
+            "chars": 669,
+            "sha": "da1ae5d777c5"
+          },
+          {
+            "heading": "# Working with the user",
+            "chars": 1432,
+            "sha": "51e6a539689d"
+          },
+          {
+            "heading": "## Intermediate commentary",
+            "chars": 1315,
+            "sha": "90184871ab43"
+          },
+          {
+            "heading": "## Final answer",
+            "chars": 189,
+            "sha": "5cc51af35557"
+          },
+          {
+            "heading": "### Formatting rules",
+            "chars": 842,
+            "sha": "e20afb47e456"
+          },
+          {
+            "heading": "### Visualizations",
+            "chars": 968,
+            "sha": "f4ff1119751f"
+          },
+          {
+            "heading": "# Rules for getting work done",
+            "chars": 1070,
+            "sha": "f3725944525a"
+          },
+          {
+            "heading": "## File editing constraints",
+            "chars": 788,
+            "sha": "315f644672cd"
+          },
+          {
+            "heading": "## Autonomy and persistence",
+            "chars": 2662,
+            "sha": "240118db639b"
+          },
+          {
+            "heading": "# Destructive actions",
+            "chars": 1256,
+            "sha": "920899489a43"
+          },
+          {
+            "heading": "# Using skills",
+            "chars": 170,
+            "sha": "68760bd7d648"
+          },
+          {
+            "heading": "### How to use skills",
+            "chars": 4514,
+            "sha": "146effb82bbf"
+          }
+        ]
+      },
+      "messages": {
+        "token_budget.enabled": {
+          "value": false
+        },
+        "token_budget.use_history_notes_extension": {
+          "value": false
+        },
+        "token_budget.reminder_threshold_tokens": {
+          "value": 6144
+        },
+        "token_budget.reminder_message_template": {
+          "chars": 926,
+          "sha": "840af84260ef"
+        },
+        "token_budget.guidance_message": {
+          "chars": 1597,
+          "sha": "797a67f14b57"
+        },
+        "token_budget.auto_compact_fallback_prompt": {
+          "chars": 785,
+          "sha": "2c97b42df753"
+        },
+        "token_budget.auto_compact_fallback_buffer_tokens": {
+          "value": 16384
+        }
+      }
+    },
+    {
+      "slug": "gpt-5.6-terra",
+      "settings": {
+        "display_name": "GPT-5.6-Terra",
+        "description": "Legacy balanced model for agentic coding.",
+        "visibility": "list",
+        "priority": 8,
+        "default_reasoning_level": "medium",
+        "reasoning_levels": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max",
+          "ultra"
+        ],
+        "context_window": 272000,
+        "max_context_window": 872000,
+        "default_verbosity": "low",
+        "default_reasoning_summary": "none",
+        "tool_mode": "code_mode_only",
+        "shell_type": "unified_exec",
+        "apply_patch_tool_type": "freeform",
+        "web_search_tool_type": "text_and_image",
+        "multi_agent_version": "v2",
+        "multi_agent_reasoning_effort": null,
+        "experimental_supported_tools": [],
+        "input_modalities": [
+          "text",
+          "image"
+        ],
+        "truncation_policy": {
+          "mode": "tokens",
+          "limit": 10000
+        },
+        "additional_speed_tiers": [
+          "fast"
+        ]
+      },
+      "instructions": {
+        "chars": 17730,
+        "sha": "a91357a1cd27",
+        "sections": [
+          {
+            "heading": "# Personality",
+            "chars": 847,
+            "sha": "f12c69337a55"
+          },
+          {
+            "heading": "## Writing style",
+            "chars": 498,
+            "sha": "4875aeb8a277"
+          },
+          {
+            "heading": "## Technical communication",
+            "chars": 669,
+            "sha": "da1ae5d777c5"
+          },
+          {
+            "heading": "# Working with the user",
+            "chars": 1432,
+            "sha": "51e6a539689d"
+          },
+          {
+            "heading": "## Intermediate commentary",
+            "chars": 1315,
+            "sha": "90184871ab43"
+          },
+          {
+            "heading": "## Final answer",
+            "chars": 189,
+            "sha": "5cc51af35557"
+          },
+          {
+            "heading": "### Formatting rules",
+            "chars": 842,
+            "sha": "e20afb47e456"
+          },
+          {
+            "heading": "### Visualizations",
+            "chars": 968,
+            "sha": "f4ff1119751f"
+          },
+          {
+            "heading": "# Rules for getting work done",
+            "chars": 1070,
+            "sha": "f3725944525a"
+          },
+          {
+            "heading": "## File editing constraints",
+            "chars": 788,
+            "sha": "315f644672cd"
+          },
+          {
+            "heading": "## Autonomy and persistence",
+            "chars": 2662,
+            "sha": "240118db639b"
+          },
+          {
+            "heading": "# Destructive actions",
+            "chars": 1256,
+            "sha": "920899489a43"
+          },
+          {
+            "heading": "# Using skills",
+            "chars": 170,
+            "sha": "68760bd7d648"
+          },
+          {
+            "heading": "### How to use skills",
+            "chars": 4514,
+            "sha": "146effb82bbf"
+          }
+        ]
+      },
+      "messages": {
+        "token_budget.enabled": {
+          "value": false
+        },
+        "token_budget.use_history_notes_extension": {
+          "value": false
+        },
+        "token_budget.reminder_threshold_tokens": {
+          "value": 6144
+        },
+        "token_budget.reminder_message_template": {
+          "chars": 926,
+          "sha": "840af84260ef"
+        },
+        "token_budget.guidance_message": {
+          "chars": 1597,
+          "sha": "797a67f14b57"
+        },
+        "token_budget.auto_compact_fallback_prompt": {
+          "chars": 785,
+          "sha": "2c97b42df753"
+        },
+        "token_budget.auto_compact_fallback_buffer_tokens": {
+          "value": 16384
+        }
+      }
+    },
+    {
+      "slug": "gpt-5.6-luna",
+      "settings": {
+        "display_name": "GPT-5.6-Luna",
+        "description": "Legacy fast model for simpler tasks.",
+        "visibility": "list",
+        "priority": 9,
+        "default_reasoning_level": "medium",
+        "reasoning_levels": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ],
+        "context_window": 272000,
+        "max_context_window": 872000,
+        "default_verbosity": "low",
+        "default_reasoning_summary": "none",
+        "tool_mode": "code_mode_only",
+        "shell_type": "unified_exec",
+        "apply_patch_tool_type": "freeform",
+        "web_search_tool_type": "text_and_image",
+        "multi_agent_version": "v1",
+        "multi_agent_reasoning_effort": null,
+        "experimental_supported_tools": [],
+        "input_modalities": [
+          "text",
+          "image"
+        ],
+        "truncation_policy": {
+          "mode": "tokens",
+          "limit": 10000
+        },
+        "additional_speed_tiers": [
+          "fast"
+        ]
+      },
+      "instructions": {
+        "chars": 17730,
+        "sha": "a91357a1cd27",
+        "sections": [
+          {
+            "heading": "# Personality",
+            "chars": 847,
+            "sha": "f12c69337a55"
+          },
+          {
+            "heading": "## Writing style",
+            "chars": 498,
+            "sha": "4875aeb8a277"
+          },
+          {
+            "heading": "## Technical communication",
+            "chars": 669,
+            "sha": "da1ae5d777c5"
+          },
+          {
+            "heading": "# Working with the user",
+            "chars": 1432,
+            "sha": "51e6a539689d"
+          },
+          {
+            "heading": "## Intermediate commentary",
+            "chars": 1315,
+            "sha": "90184871ab43"
+          },
+          {
+            "heading": "## Final answer",
+            "chars": 189,
+            "sha": "5cc51af35557"
+          },
+          {
+            "heading": "### Formatting rules",
+            "chars": 842,
+            "sha": "e20afb47e456"
+          },
+          {
+            "heading": "### Visualizations",
+            "chars": 968,
+            "sha": "f4ff1119751f"
+          },
+          {
+            "heading": "# Rules for getting work done",
+            "chars": 1070,
+            "sha": "f3725944525a"
+          },
+          {
+            "heading": "## File editing constraints",
+            "chars": 788,
+            "sha": "315f644672cd"
+          },
+          {
+            "heading": "## Autonomy and persistence",
+            "chars": 2662,
+            "sha": "240118db639b"
+          },
+          {
+            "heading": "# Destructive actions",
+            "chars": 1256,
+            "sha": "920899489a43"
+          },
+          {
+            "heading": "# Using skills",
+            "chars": 170,
+            "sha": "68760bd7d648"
+          },
+          {
+            "heading": "### How to use skills",
+            "chars": 4514,
+            "sha": "146effb82bbf"
+          }
+        ]
+      },
+      "messages": {
+        "token_budget.enabled": {
+          "value": false
+        },
+        "token_budget.use_history_notes_extension": {
+          "value": false
+        },
+        "token_budget.reminder_threshold_tokens": {
+          "value": 6144
+        },
+        "token_budget.reminder_message_template": {
+          "chars": 926,
+          "sha": "840af84260ef"
+        },
+        "token_budget.guidance_message": {
+          "chars": 1597,
+          "sha": "797a67f14b57"
+        },
+        "token_budget.auto_compact_fallback_prompt": {
+          "chars": 785,
+          "sha": "2c97b42df753"
+        },
+        "token_budget.auto_compact_fallback_buffer_tokens": {
+          "value": 16384
+        }
+      }
+    },
+    {
+      "slug": "codex-auto-review",
+      "settings": {
+        "display_name": "Codex Auto Review",
+        "description": "Automatic approval review model for Codex.",
+        "visibility": "hide",
+        "priority": 10,
+        "default_reasoning_level": "medium",
+        "reasoning_levels": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ],
+        "context_window": 272000,
+        "max_context_window": 872000,
+        "default_verbosity": "low",
+        "default_reasoning_summary": "none",
+        "tool_mode": "code_mode_only",
+        "shell_type": "unified_exec",
+        "apply_patch_tool_type": "freeform",
+        "web_search_tool_type": "text_and_image",
+        "multi_agent_version": "v1",
+        "multi_agent_reasoning_effort": null,
+        "experimental_supported_tools": [],
+        "input_modalities": [
+          "text",
+          "image"
+        ],
+        "truncation_policy": {
+          "mode": "tokens",
+          "limit": 10000
+        },
+        "additional_speed_tiers": [
+          "fast"
+        ]
+      },
+      "instructions": {
+        "chars": 17730,
+        "sha": "a91357a1cd27",
+        "sections": [
+          {
+            "heading": "# Personality",
+            "chars": 847,
+            "sha": "f12c69337a55"
+          },
+          {
+            "heading": "## Writing style",
+            "chars": 498,
+            "sha": "4875aeb8a277"
+          },
+          {
+            "heading": "## Technical communication",
+            "chars": 669,
+            "sha": "da1ae5d777c5"
+          },
+          {
+            "heading": "# Working with the user",
+            "chars": 1432,
+            "sha": "51e6a539689d"
+          },
+          {
+            "heading": "## Intermediate commentary",
+            "chars": 1315,
+            "sha": "90184871ab43"
+          },
+          {
+            "heading": "## Final answer",
+            "chars": 189,
+            "sha": "5cc51af35557"
+          },
+          {
+            "heading": "### Formatting rules",
+            "chars": 842,
+            "sha": "e20afb47e456"
+          },
+          {
+            "heading": "### Visualizations",
+            "chars": 968,
+            "sha": "f4ff1119751f"
+          },
+          {
+            "heading": "# Rules for getting work done",
+            "chars": 1070,
+            "sha": "f3725944525a"
+          },
+          {
+            "heading": "## File editing constraints",
+            "chars": 788,
+            "sha": "315f644672cd"
+          },
+          {
+            "heading": "## Autonomy and persistence",
+            "chars": 2662,
+            "sha": "240118db639b"
+          },
+          {
+            "heading": "# Destructive actions",
+            "chars": 1256,
+            "sha": "920899489a43"
+          },
+          {
+            "heading": "# Using skills",
+            "chars": 170,
+            "sha": "68760bd7d648"
+          },
+          {
+            "heading": "### How to use skills",
+            "chars": 4514,
+            "sha": "146effb82bbf"
+          }
+        ]
+      },
+      "messages": {
+        "auto_review.policy": {
+          "chars": 8281,
+          "sha": "e6b0cf0a2e1c"
+        },
+        "auto_review.policy_template": {
+          "chars": 9734,
+          "sha": "f47fbb2bdba5"
+        },
+        "auto_review.node_repl_policy": {
+          "chars": 3581,
+          "sha": "d0b3d1bf9de1"
+        }
+      }
+    }
+  ]
+}

@@ -24,9 +24,10 @@ MARK = "game_hooks.py"
 # event -> (matcher or None, statusMessage or None). Tool names were confirmed against Codex 0.163.0.
 EVENTS = {
     "SessionStart": (None, None),
+    "UserPromptSubmit": (None, None),
     "PreToolUse": ("^(Bash|apply_patch)$", None),
     "PostToolUse": ("^apply_patch$", None),
-    "Stop": (None, "Checking game project files"),
+    "Stop": (None, "Checking changed files"),
 }
 TIMEOUT = 30
 

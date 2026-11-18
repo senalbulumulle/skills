@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Engine-aware Codex hooks for game projects: Unreal, Unity, Godot, Roblox (Rojo), and more.
 
-Codex runs: python3 game_hooks.py <SessionStart|PreToolUse|PostToolUse|Stop>
+Codex runs: python3 game_hooks.py <SessionStart|UserPromptSubmit|PreToolUse|PostToolUse|Stop>
 with the event JSON on stdin, and reads JSON from stdout. Standard library only, Python 3.9+.
-Outside a game project every event is a no-op. An internal error never blocks the agent:
-the hook prints a note to stderr and exits 0 with no output.
+Engine checks run only inside a game project. In any project, a request to build a game gets a short
+creative brief, and Stop checks lines added since the last commit for unfinished or generic content.
+An internal error never blocks the agent: the hook prints a note to stderr and exits 0 with no output.
 """
 from __future__ import annotations
 
@@ -441,6 +442,96 @@ def check_file(path: Path, cwd: Path) -> list[Issue]:
     return check(project, path, _read(path), rel)
 
 
+# ---------------------------------------------------------------- creative quality
+
+# The same rules as mcp/creative-director/director.py (tools/test_codex_hooks.py keeps them identical).
+# Patterns are split across string pieces so this file never matches its own rules.
+UNFINISHED_RULES = (
+    ("filler-text", re.compile("lorem" + r"\s+" + "ipsum", re.I), "filler text"),
+    ("todo-stub", re.compile(r"\b(?:TO" + r"DO|FIX" + r"ME)\b(?:\([^)]*\))?\s*[:-]\s*.{0,40}?\b(?i:implement|placeholder|stub"
+                             r"|replace (?:this|with)|add (?:real|actual))"),
+     "a TODO stands in for the work"),
+    ("stub", re.compile(r"NotImplemented" + "Exception|\\b(?:to" + r"do|unimplemented)!\(|throw new Error\(\s*[\"'`]"
+                        "not " + "implemented", re.I),
+     "a stub stands in for the implementation"),
+    ("placeholder-text", re.compile(r"[\"'>]\s*(?:your (?:text|title|name|description) " + "here|insert [\\w ]{1,30} "
+                                    + "here|sample " + "text|placeholder " + "text)\\b", re.I),
+     "stand-in text that users would see"),
+    ("generic-title", re.compile(r"[\"'>#]\s*(?:My|Untitled|Awesome|Amazing|Epic|Cool) (?:Game|Adventure|Quest|Project)"
+                                 r"\b"),
+     "a generic title; name it after what makes it different"),
+)
+GAME_REQUEST_RE = re.compile(r"\b(?:games?|gameplay|minigames?|boss(?:es)?|enem(?:y|ies)|platformer|shooter|roguelike|"
+                             r"rpg|obby|tycoon|simulator|npcs?|quests?)\b", re.I)
+LEVEL_RE = re.compile(r"\b(?:levels?|mechanics?|power-?ups?|weapons?)\b", re.I)
+CREATIVE_VERB_RE = re.compile(r"\b(?:make|build|create|design|prototype|develop|implement|add|write|remake|generate)\b",
+                              re.I)
+CREATIVE_BRIEF = ("Creative brief (from game_hooks): commit to one specific idea with a hook a player would describe to "
+                  "a friend. Use real names, numbers, and text that fit the world, never stand-ins. Get the smallest "
+                  "playable version running, make input feel instant and give every action visible and audible "
+                  "feedback, then build or run it to verify before you finish.")
+MAX_LINE_SHOWN = 100
+
+
+def _skip_for_unfinished(path: str) -> bool:
+    """Tests, fixtures, lockfiles, and minified files may contain these patterns on purpose."""
+    parts = path.lower().split("/")
+    name = parts[-1]
+    return (name.startswith("test_") or ".test." in name or ".spec." in name or name.endswith(("_test.py", ".lock",
+            ".min.js", "-lock.json")) or any(part in {"test", "tests", "__tests__", "spec", "fixtures"} for part in parts))
+
+
+def _git(root: Path, *args: str, timeout: int = 10) -> Optional[str]:
+    try:
+        out = subprocess.run(["git", "-C", str(root), "-c", "core.quotePath=false", *args],
+                             capture_output=True, text=True, errors="replace", timeout=timeout)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return out.stdout if out.returncode == 0 else None
+
+
+def added_lines(cwd: Path) -> list[tuple[str, int, str]]:
+    """(path relative to the git root, line number, text) for each line added since HEAD, untracked files included."""
+    top = _git(cwd, "rev-parse", "--show-toplevel", timeout=5)
+    if top is None:
+        return []
+    root = Path(top.strip())
+    added: list[tuple[str, int, str]] = []
+    diff = _git(root, "diff", "--no-color", "--no-ext-diff", "-U0", "HEAD") or ""
+    path, number = None, 0
+    for line in diff.splitlines():
+        if line.startswith("+++ "):
+            path = line[6:] if line.startswith("+++ b/") else None
+        elif line.startswith("@@"):
+            m = re.match(r"@@ -\S+ \+(\d+)", line)
+            number = int(m.group(1)) if m else 0
+        elif line.startswith("+") and path is not None:
+            added.append((path, number, line[1:]))
+            number += 1
+    head_exists = _git(root, "rev-parse", "--verify", "--quiet", "HEAD", timeout=5) is not None
+    new_files = _git(root, "ls-files", "-z", "--others", "--exclude-standard") or ""
+    if not head_exists:  # no commit yet: every tracked file is new too
+        new_files += _git(root, "ls-files", "-z") or ""
+    for name in sorted(set(filter(None, new_files.split("\0"))))[:MAX_STOP_FILES]:
+        file = root / name
+        if file.is_file() and file.stat().st_size <= 1_000_000:
+            data = file.read_bytes()
+            if b"\0" not in data[:4096]:
+                added += [(name, i, text) for i, text in enumerate(data.decode("utf-8", "replace").splitlines(), 1)]
+    return added
+
+
+def unfinished_issues(cwd: Path) -> list[Issue]:
+    issues = []
+    for path, number, text in added_lines(cwd):
+        if _skip_for_unfinished(path):
+            continue
+        for _rule, pattern, message in UNFINISHED_RULES:
+            if pattern.search(text):
+                issues.append(Issue("error", path, number, f"{message}: {text.strip()[:MAX_LINE_SHOWN]}"))
+    return issues
+
+
 # ---------------------------------------------------------------- tool input parsing
 
 def parse_patch(patch: str) -> list[tuple[str, str]]:
@@ -632,6 +723,17 @@ def on_session_start(event: dict) -> Optional[dict]:
     return {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context}}
 
 
+def on_user_prompt_submit(event: dict) -> Optional[dict]:
+    prompt = event.get("prompt")
+    if not isinstance(prompt, str) or not CREATIVE_VERB_RE.search(prompt):
+        return None
+    if not GAME_REQUEST_RE.search(prompt):
+        in_game_project = LEVEL_RE.search(prompt) and detect_all(Path(event.get("cwd") or os.getcwd()))
+        if not in_game_project:
+            return None
+    return {"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": CREATIVE_BRIEF}}
+
+
 def on_pre_tool_use(event: dict) -> Optional[dict]:
     cwd = Path(event.get("cwd") or os.getcwd())
     tool_input = event.get("tool_input")
@@ -713,15 +815,19 @@ def on_stop(event: dict) -> Optional[dict]:
         return None  # already asked once this turn; never loop
     cwd = Path(event.get("cwd") or os.getcwd())
     errors = [i for f in changed_files(cwd) for i in check_file(f, cwd) if i.level == "error"]
-    if not errors:
+    unfinished = unfinished_issues(cwd)
+    parts = []
+    if errors:
+        parts.append("Engine checks found errors in changed files:\n" + _report(errors))
+    if unfinished:
+        parts.append("Lines added since the last commit look unfinished or generic:\n" + _report(unfinished))
+    if not parts:
         return None
-    return {"decision": "block",
-            "reason": "Engine checks found errors in changed files:\n" + _report(errors)
-                      + "\nFix them, or tell the user why they should stay."}
+    return {"decision": "block", "reason": "\n".join(parts) + "\nFix them, or tell the user why they should stay."}
 
 
-HANDLERS = {"SessionStart": on_session_start, "PreToolUse": on_pre_tool_use,
-            "PostToolUse": on_post_tool_use, "Stop": on_stop}
+HANDLERS = {"SessionStart": on_session_start, "UserPromptSubmit": on_user_prompt_submit,
+            "PreToolUse": on_pre_tool_use, "PostToolUse": on_post_tool_use, "Stop": on_stop}
 
 
 def main(argv: Iterable[str]) -> int:

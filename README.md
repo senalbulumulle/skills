@@ -46,12 +46,18 @@ Codex shows these in its skill picker with a display name and default prompt (`p
 | Server | Tools | Setup |
 | --- | --- | --- |
 | [roblox-forge](mcp/roblox-forge/README.md) | `create_project`, `check_project`, `audit_remotes`, `check_odds`, `datastore_budget`, `luau_check` | one server for Claude Code and Codex; see its README |
+| [creative-director](mcp/creative-director/README.md) | `concept_seeds`, `review_design`, `find_slop` | one server for Claude Code and Codex; see its README |
 
 ## Hooks
 
 | Hooks | Platform | What they do |
 | --- | --- | --- |
-| [game hooks](platforms/codex/hooks/README.md) | Codex | Detect the engine (Unreal, Unity, Godot, Roblox/Rojo, and more). Add its rules at session start, block publishing and edits to binary or generated files, check edited files, and stop the agent once if errors remain |
+| [game hooks](platforms/codex/hooks/README.md) | Codex | Detect the engine (Unreal, Unity, Godot, Roblox/Rojo, and more). Add its rules at session start, add a creative brief to game requests, block publishing and edits to binary or generated files, check edited files, and stop the agent once if errors or unfinished content remain |
+
+## Codex profile and models
+
+- [`codex -p game`](platforms/codex/profile/README.md): a profile with creative direction for games and software, the strongest Astra model the installed Codex lists, and high reasoning effort. Two agent roles come with it: game-designer and game-critic.
+- [Model comparison](platforms/codex/models/README.md): how GPT Sol, Astra, Luna, and Terra differ in Codex's catalog, and a tool to compare them after each Codex update.
 
 ## Layout
 
@@ -62,6 +68,8 @@ template/SKILL.md                    # starting point for `new`
 tools/skills.py                      # validate, new, install, uninstall
 mcp/<server>/                        # MCP servers (one per folder, shared by all platforms)
 platforms/codex/hooks/               # Codex lifecycle hooks for game projects
+platforms/codex/profile/             # Codex "game" profile and agent roles
+platforms/codex/models/              # Codex model catalog comparison
 scripts/codex/                       # Codex install scripts (install-codex.sh, uninstall-codex.sh, ...)
 ```
 
@@ -75,21 +83,23 @@ To run every development check (see AGENTS.md): Node.js 22+, [Luau](https://gith
 
 ## Install
 
-For Codex, one script installs the skills and the game hooks globally:
+For Codex, one script installs everything globally: the skills, the game hooks, the `game` profile with its agent roles, and the creative-director MCP server.
 
 ```sh
-scripts/codex/install-codex.sh          # skills -> ~/.agents/skills, game hooks -> ~/.codex/hooks.json
+scripts/codex/install-codex.sh          # all four components
 scripts/codex/uninstall-codex.sh        # removes only what these scripts installed
 ```
 
 | Script | Effect |
 | --- | --- |
-| `scripts/codex/install-codex.sh [--skills-only \| --hooks-only]` | Both steps, or one. Safe to re-run |
+| `scripts/codex/install-codex.sh [--only skills,hooks,profile,mcp]` | All components, or the listed ones. Safe to re-run |
 | `scripts/codex/install-codex-skills.sh [name ...]` | Skills only (all, or the named ones), validated first |
 | `scripts/codex/install-codex-hooks.sh [--dry-run]` | Game hooks only. Other hooks in `hooks.json` are kept |
-| `scripts/codex/uninstall-codex.sh [--skills-only \| --hooks-only]` | Removes this repo's skill links and `game_hooks.py` handlers |
+| `scripts/codex/install-codex-profile.sh [--model SLUG] [--dry-run]` | `~/.codex/game.config.toml` and the agent roles. Never overwrites files you wrote |
+| `scripts/codex/install-codex-mcp.sh` | Registers the creative-director MCP server with `codex mcp add` |
+| `scripts/codex/uninstall-codex.sh [--only ...]` | Removes this repo's skill links, hook handlers, profile, roles, and MCP registration |
 
-They need `uv`, and `python3` 3.9 or newer. After installing, run `/hooks` once in Codex to trust the game hooks, because Codex skips untrusted hooks. The hooks run from this checkout, so re-run the script if you move the repo.
+They need `uv`, `python3` 3.9 or newer, and `codex` (for the MCP step). After installing, run `/hooks` once in Codex to trust the game hooks, because Codex skips untrusted hooks. Start a session with the profile with `codex -p game`. The hooks and MCP server run from this checkout, so re-run the script if you move the repo.
 
 For other platforms, or finer control, use the skills CLI directly:
 

@@ -340,6 +340,77 @@ class StopGate(HookCase):
         self.assertIsNone(self.run_hook("Stop", {"stop_hook_active": False}))
 
 
+def git(root: Path, *args: str) -> None:
+    subprocess.run(["git", "-C", str(root), "-c", "user.name=t", "-c", "user.email=t@example.com", *args],
+                   check=True, capture_output=True)
+
+
+class CreativeBrief(HookCase):
+    def prompt(self, text: str):
+        return self.run_hook("UserPromptSubmit", {"prompt": text})
+
+    def test_game_requests_get_the_brief_anywhere(self):
+        for text in ("Make a roguelike about a lighthouse keeper", "build me an obby with 10 stages",
+                     "Can you create a small platformer game in one HTML file?"):
+            self.assertIn("Creative brief", self.context(self.prompt(text)), text)
+            self.assertEqual(self.prompt(text)["hookSpecificOutput"]["hookEventName"], "UserPromptSubmit")
+
+    def test_other_requests_get_nothing(self):
+        for text in ("add debug level logging to the API", "what does this game loop do?", "fix the failing test",
+                     "make the log level configurable"):
+            self.assertIsNone(self.prompt(text), text)
+
+    def test_level_words_count_only_in_a_game_project(self):
+        self.assertIsNone(self.prompt("add a new level with moving platforms"))
+        make_godot(self.root)
+        self.assertIn("Creative brief", self.context(self.prompt("add a new level with moving platforms")))
+        self.assertIsNone(self.prompt("fix the crash in level 2"))  # no creative verb
+
+
+class UnfinishedWork(HookCase):
+    def setUp(self):
+        super().setUp()
+        shutil.rmtree(self.root / ".git")
+        git(self.root, "init", "-q")
+
+    def stop(self):
+        return self.run_hook("Stop", {"stop_hook_active": False})
+
+    def test_flags_only_lines_added_since_the_last_commit(self):
+        write(self.root, "src/old.js", 'const title = "My ' + 'Game";\n')
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-qm", "init")
+        self.assertIsNone(self.stop())  # committed content is the user's business
+        write(self.root, "src/old.js", 'const title = "My ' + 'Game";\n// TO' + 'DO: implement scoring\n')
+        write(self.root, "src/ui.lua", 'label.Text = "Your text ' + 'here"\n')
+        out = self.stop()
+        self.assertEqual(out["decision"], "block")
+        self.assertIn("src/old.js:2: error: a TODO stands in for the work", out["reason"])
+        self.assertIn("src/ui.lua:1: error: stand-in text", out["reason"])
+        self.assertNotIn("src/old.js:1", out["reason"])
+        self.assertIsNone(self.run_hook("Stop", {"stop_hook_active": True}))
+
+    def test_before_the_first_commit_every_file_is_new(self):
+        write(self.root, "README.md", "lor" + "em ipsum dolor\n")
+        git(self.root, "add", "-A")
+        self.assertIn("README.md:1: error: filler text", self.stop()["reason"])
+
+    def test_tests_and_ordinary_todos_are_fine(self):
+        write(self.root, "tests/test_text.py", 'SAMPLE = "lor' + 'em ipsum"\n')
+        write(self.root, "src/game.py", "# TO" + "DO: tune the jump arc after playtesting\nraise NotImplementedError\n")
+        self.assertIsNone(self.stop())
+
+    def test_rules_match_the_creative_director_server(self):
+        sys.path.insert(0, str(HOOKS.parents[2] / "mcp" / "creative-director"))
+        try:
+            import director
+            import game_hooks
+        finally:
+            sys.path.pop(0)
+        self.assertEqual([(r, p.pattern, p.flags, m) for r, p, m in game_hooks.UNFINISHED_RULES],
+                         [(r, p.pattern, p.flags, m) for r, p, m in director.UNFINISHED_RULES])
+
+
 class Installer(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
@@ -359,7 +430,7 @@ class Installer(unittest.TestCase):
         for _ in range(2):
             self.assertEqual(install.main(["--user"]), 0)
         hooks = self.config(self.home / "hooks.json")["hooks"]
-        self.assertEqual(sorted(hooks), ["PostToolUse", "PreToolUse", "SessionStart", "Stop"])
+        self.assertEqual(sorted(hooks), ["PostToolUse", "PreToolUse", "SessionStart", "Stop", "UserPromptSubmit"])
         pre = [h for g in hooks["PreToolUse"] for h in g["hooks"]]
         self.assertEqual(len(pre), 2)
         self.assertIn(other, pre)

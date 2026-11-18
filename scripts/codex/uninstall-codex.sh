@@ -1,36 +1,31 @@
 #!/usr/bin/env bash
 # Remove what scripts/codex/install-codex.sh installed for Codex:
-#   - skill links in ~/.agents/skills/ that point into this repo (other skills are kept)
-#   - game_hooks.py handlers in $CODEX_HOME/hooks.json (other hooks are kept)
+#   skills   skill links in ~/.agents/skills/ that point into this repo (other skills are kept)
+#   hooks    game_hooks.py handlers in $CODEX_HOME/hooks.json (other hooks are kept)
+#   profile  game.config.toml and the agent roles this repo installed (files you wrote are kept)
+#   mcp      the creative-director MCP server, if it points at this checkout
 #
-#   scripts/codex/uninstall-codex.sh                 both
-#   scripts/codex/uninstall-codex.sh --skills-only   skills only
-#   scripts/codex/uninstall-codex.sh --hooks-only    hooks only
+#   scripts/codex/uninstall-codex.sh                      all four
+#   scripts/codex/uninstall-codex.sh --only skills,hooks  just the ones listed
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_common.sh"
 
-skills=1
-hooks=1
-for arg in "$@"; do
-  case "$arg" in
-    --skills-only) hooks=0 ;;
-    --hooks-only) skills=0 ;;
-    -h|--help) usage "${BASH_SOURCE[0]}"; exit 0 ;;
-    *) die "unknown option: $arg (see --help)" ;;
+select_components "${BASH_SOURCE[0]}" "$@"
+
+if selected skills; then need_uv; fi
+if selected hooks || selected profile || selected mcp; then need_python39; fi
+if selected mcp; then need_codex; fi
+
+here="$(dirname "${BASH_SOURCE[0]}")"
+status=0
+for component in $ALL_COMPONENTS; do
+  selected "$component" || continue
+  info "== $component"
+  case "$component" in
+    skills) "$REPO_ROOT/tools/skills.py" uninstall -p codex || status=1 ;;
+    hooks) python3 "$REPO_ROOT/platforms/codex/hooks/install.py" --user --uninstall || status=1 ;;
+    profile) python3 "$REPO_ROOT/platforms/codex/profile/install.py" --uninstall || status=1 ;;
+    mcp) bash "$here/install-codex-mcp.sh" --uninstall || status=1 ;;
   esac
 done
-[ "$skills" = 1 ] || [ "$hooks" = 1 ] || die "--skills-only and --hooks-only together remove nothing"
-
-if [ "$skills" = 1 ]; then need uv "Install it from https://docs.astral.sh/uv/ (the skills CLI runs through uv)."; fi
-if [ "$hooks" = 1 ]; then need_python39; fi
-
-status=0
-if [ "$skills" = 1 ]; then
-  info "== Skills"
-  "$REPO_ROOT/tools/skills.py" uninstall -p codex || status=1
-fi
-if [ "$hooks" = 1 ]; then
-  info "== Game hooks"
-  python3 "$REPO_ROOT/platforms/codex/hooks/install.py" --user --uninstall || status=1
-fi
 exit "$status"
