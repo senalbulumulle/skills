@@ -1,4 +1,4 @@
-"""Tests for the Codex install scripts in scripts/, run against a throwaway HOME.
+"""Tests for the Codex install scripts in scripts/codex/, run against a throwaway HOME.
 
 Run: python3 -m unittest tools/test_install_scripts.py  (needs bash, uv, and python3 3.9+)
 """
@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-SCRIPTS = REPO / "scripts"
+SCRIPTS = REPO / "scripts" / "codex"
 SKILLS = sorted(p.name for p in (REPO / "skills").iterdir() if (p / "SKILL.md").is_file())
 
 

@@ -62,7 +62,7 @@ template/SKILL.md                    # starting point for `new`
 tools/skills.py                      # validate, new, install, uninstall
 mcp/<server>/                        # MCP servers (one per folder, shared by all platforms)
 platforms/codex/hooks/               # Codex lifecycle hooks for game projects
-scripts/                             # install scripts (install-codex.sh, uninstall-codex.sh, ...)
+scripts/codex/                       # Codex install scripts (install-codex.sh, uninstall-codex.sh, ...)
 ```
 
 All six platforms read the same `SKILL.md` format, so a skill lives in `skills/` unless it must differ on one platform. See [platforms/README.md](platforms/README.md) for how overrides work, and each platform's README for its folders and extra frontmatter.
@@ -78,16 +78,16 @@ To run every development check (see AGENTS.md): Node.js 22+, [Luau](https://gith
 For Codex, one script installs the skills and the game hooks globally:
 
 ```sh
-scripts/install-codex.sh          # skills -> ~/.agents/skills, game hooks -> ~/.codex/hooks.json
-scripts/uninstall-codex.sh        # removes only what these scripts installed
+scripts/codex/install-codex.sh          # skills -> ~/.agents/skills, game hooks -> ~/.codex/hooks.json
+scripts/codex/uninstall-codex.sh        # removes only what these scripts installed
 ```
 
 | Script | Effect |
 | --- | --- |
-| `scripts/install-codex.sh [--skills-only \| --hooks-only]` | Both steps, or one. Safe to re-run |
-| `scripts/install-codex-skills.sh [name ...]` | Skills only (all, or the named ones), validated first |
-| `scripts/install-codex-hooks.sh [--dry-run]` | Game hooks only. Other hooks in `hooks.json` are kept |
-| `scripts/uninstall-codex.sh [--skills-only \| --hooks-only]` | Removes this repo's skill links and `game_hooks.py` handlers |
+| `scripts/codex/install-codex.sh [--skills-only \| --hooks-only]` | Both steps, or one. Safe to re-run |
+| `scripts/codex/install-codex-skills.sh [name ...]` | Skills only (all, or the named ones), validated first |
+| `scripts/codex/install-codex-hooks.sh [--dry-run]` | Game hooks only. Other hooks in `hooks.json` are kept |
+| `scripts/codex/uninstall-codex.sh [--skills-only \| --hooks-only]` | Removes this repo's skill links and `game_hooks.py` handlers |
 
 They need `uv`, and `python3` 3.9 or newer. After installing, run `/hooks` once in Codex to trust the game hooks, because Codex skips untrusted hooks. The hooks run from this checkout, so re-run the script if you move the repo.
 

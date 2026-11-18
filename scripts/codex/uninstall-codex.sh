@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Remove what scripts/install-codex.sh installed for Codex:
+# Remove what scripts/codex/install-codex.sh installed for Codex:
 #   - skill links in ~/.agents/skills/ that point into this repo (other skills are kept)
 #   - game_hooks.py handlers in $CODEX_HOME/hooks.json (other hooks are kept)
 #
-#   scripts/uninstall-codex.sh                 both
-#   scripts/uninstall-codex.sh --skills-only   skills only
-#   scripts/uninstall-codex.sh --hooks-only    hooks only
+#   scripts/codex/uninstall-codex.sh                 both
+#   scripts/codex/uninstall-codex.sh --skills-only   skills only
+#   scripts/codex/uninstall-codex.sh --hooks-only    hooks only
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_common.sh"
 

@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Install everything this repo provides for Codex, globally on this device:
-#   1. skills -> ~/.agents/skills/        (scripts/install-codex-skills.sh)
-#   2. game hooks -> $CODEX_HOME/hooks.json (scripts/install-codex-hooks.sh)
+#   1. skills -> ~/.agents/skills/        (scripts/codex/install-codex-skills.sh)
+#   2. game hooks -> $CODEX_HOME/hooks.json (scripts/codex/install-codex-hooks.sh)
 #
-#   scripts/install-codex.sh                 both
-#   scripts/install-codex.sh --skills-only   skills only
-#   scripts/install-codex.sh --hooks-only    hooks only
+#   scripts/codex/install-codex.sh                 both
+#   scripts/codex/install-codex.sh --skills-only   skills only
+#   scripts/codex/install-codex.sh --hooks-only    hooks only
 #
 # Safe to re-run: it updates what it installed before and leaves everything else alone.
-# Undo with scripts/uninstall-codex.sh.
+# Undo with scripts/codex/uninstall-codex.sh.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_common.sh"
 
