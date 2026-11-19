@@ -14,7 +14,8 @@ from mcp.client.stdio import stdio_client
 
 MCP = Path(__file__).resolve().parent.parent / "mcp"
 SERVER = MCP / "roblox-forge" / "server.py"
-EXPECTED = {"create_project", "check_project", "audit_remotes", "check_odds", "datastore_budget", "luau_check"}
+EXPECTED = {"create_project", "check_project", "map_remotes", "audit_remotes", "audit_feel", "check_odds",
+            "datastore_budget", "luau_check"}
 DIRECTOR = MCP / "creative-director" / "server.py"
 DIRECTOR_TOOLS = {"concept_seeds", "review_design", "find_slop"}
 
@@ -50,6 +51,10 @@ async def roblox_forge():
                 assert checked["ok"] and not checked["warnings"], checked
                 audited = payload(await session.call_tool("audit_remotes", {"path": game}))
                 assert audited["ok"] and audited["wrapped"] == 1, audited
+                mapped = payload(await session.call_tool("map_remotes", {"path": game}))
+                assert mapped["ok"] and [r["name"] for r in mapped["remotes"]] == ["ClaimDaily"], mapped
+                feel = payload(await session.call_tool("audit_feel", {"path": game}))
+                assert feel["ok"] and feel["with_feedback"] == 1, feel
 
             odds = payload(await session.call_tool("check_odds", {"outcomes": [
                 {"name": "Common", "percent": 90}, {"name": "Rare", "percent": 10}]}))
@@ -71,6 +76,8 @@ async def creative_director():
             assert seeds["ok"] and seeds["seed"] == 7 and len(seeds["concepts"]) == 2, seeds
             review = payload(await session.call_tool("review_design", {"text": "# Pitch\nA game.\n"}))
             assert not review["ok"] and review["sections"]["fantasy"] == "Pitch", review
+            brief = payload(await session.call_tool("review_design", {"text": "**Hook:** x\n", "platform": "roblox"}))
+            assert brief["sections"]["hook"] == "Hook" and "social" in [m["section"] for m in brief["missing"]], brief
             with tempfile.TemporaryDirectory() as tmp:
                 (Path(tmp) / "ui.js").write_text('title = "My ' + 'Game";\n')
                 slop = payload(await session.call_tool("find_slop", {"paths": [tmp]}))

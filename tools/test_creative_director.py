@@ -101,7 +101,8 @@ class FindSlop(unittest.TestCase):
         self.assertEqual(result["more"], 5)
 
     def test_the_server_source_is_clean(self):
-        result = director.find_slop([str(REPO / "mcp" / "creative-director"), str(REPO / "platforms" / "codex")])
+        result = director.find_slop([str(REPO / "mcp"), str(REPO / "platforms" / "codex"),
+                                     str(REPO / "skills" / "roblox-scripting" / "assets")])
         self.assertTrue(result["ok"], result["findings"])
 
 
@@ -134,6 +135,78 @@ class ReviewDesign(unittest.TestCase):
         self.assertIn("exactly one", director.review_design()["error"])
         self.assertIn("exactly one", director.review_design(text="x", path="y")["error"])
         self.assertIn("cannot read", director.review_design(path="/no/such/file.md")["error"])
+
+
+ROBLOX_BRIEF = """# Lantern Relay
+
+**Hook:** Your whole server carries one lantern up a mountain, and whoever holds it lights the path for everyone.
+**Devices:** phone, PC, console · **Party size:** server-wide (up to 12) · **Session:** 15 minutes
+
+## First minute
+| Time | Player sees | Player does | Reward |
+| --- | --- | --- | --- |
+| 0-10 s | the lantern glowing at camp | walks to it | a spark trail |
+| 10-60 s | the first dark ledge | passes the lantern | 5 embers |
+
+## Loops
+Short: pass the lantern every 20 s. Session: reach the summit. Long: unlock 3 lantern colors.
+
+## Social hook
+Nobody climbs alone: the path is lit only within 8 studs of the lantern.
+
+## Controls
+| Action | Touch | Keyboard / mouse | Gamepad |
+| --- | --- | --- | --- |
+| Pass | big button | E | X |
+
+## Closest existing experiences
+| Experience | Shared | Different |
+| --- | --- | --- |
+| Tower climbs | climbing | one shared light |
+
+## Monetization
+Lantern skins for 50 Robux; no power for sale.
+
+## MVP
+1. One mountain, one lantern.
+"""
+
+
+class ReviewRobloxBrief(unittest.TestCase):
+    def test_complete_brief_passes(self):
+        result = director.review_design(text=ROBLOX_BRIEF, platform="roblox")
+        self.assertTrue(result["ok"], result)
+        self.assertEqual(result["sections"]["hook"], "Hook")  # a **Label:** line counts as a heading
+        self.assertEqual(result["sections"]["devices"], "Devices")
+        self.assertEqual(result["sections"]["social"], "Party size")
+
+    def test_gaps_and_odds(self):
+        doc = "# Pet Hatch\n\n## Loops\nHatch eggs for 100 Robux each and collect 30 pets in 5 worlds.\n"
+        result = director.review_design(text=doc, platform="roblox")
+        self.assertFalse(result["ok"])
+        self.assertEqual([m["section"] for m in result["missing"]],
+                         ["hook", "first_minute", "social", "devices", "controls", "comparables", "monetization",
+                          "scope"])
+        self.assertTrue(any("no odds" in n for n in result["notes"]))
+        with_odds = doc + "\nOdds: Common 90%, Rare 10%.\n"
+        self.assertFalse(any("no odds" in n for n in director.review_design(text=with_odds, platform="roblox")["notes"]))
+        self.assertIn("platform must be", director.review_design(text=doc, platform="unity")["error"])
+
+    def test_the_shipped_brief_template_has_every_section(self):
+        template = REPO / "skills" / "roblox-game-design" / "assets" / "roblox-brief.md"
+        self.assertEqual(director.review_design(path=str(template), platform="roblox")["missing"], [])
+
+
+class RobloxRules(unittest.TestCase):
+    def test_fake_asset_ids_and_default_labels(self):
+        asset = "rbxasset" + "id://"
+        lines = [f'img.Image = "{asset}0"', f'sound.SoundId = "{asset}123456789"', f'icon.Image = "{asset}"',
+                 'button.Text = "Butt' + 'on"', "label.Text = 'Lab" + "el'"]
+        fine = [f'img.Image = "{asset}1234598765"', f'img.Image = "{asset}" .. iconId', f'img.Image = `{asset}{{id}}`',
+                'box.PlaceholderText = "Lab' + 'el"', 'button.Text = "Claim 100 coins"']
+        rules = [f["rule"] for line in lines for f in director.scan_text(line, prose=False)]
+        self.assertEqual(rules, ["fake-asset-id"] * 3 + ["default-ui-text"] * 2)
+        self.assertEqual([f for line in fine for f in director.scan_text(line, prose=False)], [])
 
 
 class ConceptSeeds(unittest.TestCase):

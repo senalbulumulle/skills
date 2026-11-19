@@ -306,3 +306,332 @@ def luau_check(paths: list[str], mode: str = "strict") -> dict:
     issues = [line for line in (run.stdout + run.stderr).splitlines() if line.strip()]
     shown, hidden = _capped(issues)
     return {"ok": run.returncode == 0 and not issues, "files": len(files), "issues": shown, "more_issues": hidden}
+
+
+# ---------------------------------------------------------------------------------------------
+# Shared Luau text handling for map_remotes and audit_feel. Blanking keeps every character's position,
+# so offsets and line numbers found in one version of the text are valid in the other.
+LUA_TOKEN_RE = re.compile(r'"(?:\\.|[^"\\\n])*"|\'(?:\\.|[^\'\\\n])*\'|`(?:\\.|[^`\\])*`|--\[(=*)\[.*?\]\1\]|--[^\n]*'
+                          r'|\[(=*)\[.*?\]\2\]', re.S)
+
+
+def _blank_lua(text: str, strings: bool) -> str:
+    """Blank comments (and string contents too when strings is true), keeping newlines and length."""
+    def repl(m: re.Match) -> str:
+        s = m.group(0)
+        if s.startswith("--"):
+            return re.sub(r"[^\n]", " ", s)
+        if strings:
+            return s[0] + re.sub(r"[^\n]", " ", s[1:-1]) + s[-1]
+        return s
+    return LUA_TOKEN_RE.sub(repl, text)
+
+
+def _luau_files(root: Path) -> list[Path]:
+    if root.is_file():
+        return [root]
+    return sorted(f for f in root.rglob("*") if f.suffix in (".luau", ".lua") and f.is_file()
+                  and not (set(f.relative_to(root).parts) & SKIP_DIRS))
+
+
+def _rel(f: Path, root: Path) -> str:
+    return str(f.relative_to(root)) if root.is_dir() else f.name
+
+
+def _line_of(text: str, pos: int) -> int:
+    return text.count("\n", 0, pos) + 1
+
+
+# ---------------------------------------------------------------------------------------------
+REMOTE_CLASSES = {"RemoteEvent": "event", "UnreliableRemoteEvent": "event", "RemoteFunction": "function"}
+# (pattern, kind it needs, direction). Fires name the method; handlers name the event or callback.
+REMOTE_USES = (
+    (re.compile(r"[.:]\s*(FireServer)\s*\("), "event", "to_server", "fire"),
+    (re.compile(r"[.:]\s*(InvokeServer)\s*\("), "function", "to_server", "fire"),
+    (re.compile(r"[.:]\s*(FireClient|FireAllClients)\s*\("), "event", "to_client", "fire"),
+    (re.compile(r"[.:]\s*(InvokeClient)\s*\("), "function", "to_client", "fire"),
+    (re.compile(r"\.\s*(OnServerEvent)\b"), "event", "to_server", "handle"),
+    (re.compile(r"\.\s*(OnServerInvoke)\b"), "function", "to_server", "handle"),
+    (re.compile(r"\.\s*(OnClientEvent)\b"), "event", "to_client", "handle"),
+    (re.compile(r"\.\s*(OnClientInvoke)\b"), "function", "to_client", "handle"),
+)
+# The remote's name at the end of an expression: :WaitForChild("X"), ["X"], .X, or a local alias.
+NAME_AT_END = (
+    re.compile(r"""[.:]\s*(?:WaitForChild|FindFirstChild)\s*\(\s*["']([^"']+)["']\s*(?:,[^()]*)?\)$"""),
+    re.compile(r"""\[\s*["']([^"']+)["']\s*\]$"""),
+    re.compile(r"(?<!\bself)\.\s*([A-Za-z_]\w*)$"),  # self.x is a field holding some remote, not its name
+)
+ALIAS_RE = re.compile(r"^\s*local\s+([A-Za-z_]\w*)\s*(?::\s*[\w.]+\??\s*)?=\s*(.+?)\s*(?:::\s*[\w.]+\??\s*)?;?\s*$")
+INSTANCE_NEW_RE = re.compile(r"""^\s*local\s+([A-Za-z_]\w*)\s*=\s*Instance\.new\(\s*["'](\w+)["']""")
+NEW_REMOTE_RE = re.compile(r"""Instance\.new\(\s*["'](?:RemoteEvent|UnreliableRemoteEvent|RemoteFunction)["']""")
+
+
+def _expr_name(expr: str, aliases: dict[str, str | None]) -> str | None:
+    expr = re.sub(r"\s*::\s*[\w.]+\??$", "", expr.rstrip())
+    for pattern in NAME_AT_END:
+        m = pattern.search(expr)
+        if m:
+            return m.group(1)
+    bare = re.search(r"(?<![\w.:])([A-Za-z_]\w*)$", expr)
+    return aliases.get(bare.group(1)) if bare else None
+
+
+def _declared_in_project(node: object, path: list[str], where: str, out: list) -> None:
+    if not isinstance(node, dict):
+        return
+    cls = node.get("$className")
+    if path and cls in REMOTE_CLASSES:
+        out.append((path[-1], cls, f"{where}:{'.'.join(path)}"))
+    for key, child in node.items():
+        if not key.startswith("$"):
+            _declared_in_project(child, path + [key], where, out)
+
+
+def _declared_in_model(node: object, name: str, where: str, out: list) -> None:
+    if not isinstance(node, dict):
+        return
+    cls = node.get("ClassName") or node.get("className")
+    if cls in REMOTE_CLASSES:
+        out.append((name, cls, where))
+    for child in node.get("Children") or node.get("children") or []:
+        if isinstance(child, dict):
+            _declared_in_model(child, str(child.get("Name") or child.get("name") or ""), where, out)
+
+
+def map_remotes(path: str) -> dict:
+    """Inventory every RemoteEvent and RemoteFunction by name: where it is declared (project or model JSON,
+    or Instance.new with a literal Name), fired, and handled. Flags remotes fired with no handler, handlers
+    nothing fires, Fire/Invoke used on the wrong class, and names used in code but never declared."""
+    root = Path(path).expanduser().resolve()
+    if not root.exists():
+        return {"ok": False, "error": f"not found: {root}"}
+    declared: list[tuple[str, str, str]] = []
+    if root.is_dir():
+        for f in sorted(root.glob("*.project.json")) + sorted(
+                f for f in root.rglob("*.model.json") if not (set(f.relative_to(root).parts) & SKIP_DIRS)):
+            try:
+                data = json.loads(f.read_text(encoding="utf-8"))
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+                continue
+            if f.name.endswith(".project.json"):
+                _declared_in_project(data.get("tree") if isinstance(data, dict) else None, [], f.name, declared)
+            else:
+                _declared_in_model(data, f.name[:-len(".model.json")], _rel(f, root), declared)
+
+    uses: list[dict] = []
+    unresolved, dynamic = [], []
+    files = _luau_files(root)
+    for f in files:
+        try:
+            code = _blank_lua(f.read_text(encoding="utf-8"), strings=False)
+        except (OSError, UnicodeDecodeError):
+            continue
+        rel = _rel(f, root)
+        lines = code.splitlines()
+        # Pass 1: local aliases (a name bound to two different remotes is ambiguous) and created remotes.
+        aliases: dict[str, str | None] = {}
+        created: dict[str, tuple[str, int]] = {}
+        for i, line in enumerate(lines, 1):
+            new = INSTANCE_NEW_RE.match(line)
+            if new and new.group(2) in REMOTE_CLASSES:
+                created[new.group(1)] = (new.group(2), i)
+                continue
+            if NEW_REMOTE_RE.search(line):  # created inside an expression: its name is set some other way
+                dynamic.append(f"{rel}:{i}")
+            m = ALIAS_RE.match(line)
+            if m:
+                name = _expr_name(m.group(2), aliases)
+                if name is not None:
+                    aliases[m.group(1)] = name if aliases.get(m.group(1), name) == name else None
+        for var, (cls, line_no) in created.items():
+            named = re.search(rf"\b{re.escape(var)}\.Name\s*=\s*[\"']([^\"']+)[\"']", code)
+            if named:
+                declared.append((named.group(1), cls, f"{rel}:{line_no}"))
+                aliases[var] = named.group(1)
+            else:
+                dynamic.append(f"{rel}:{line_no}")
+        # Pass 2: fires and handlers.
+        for i, line in enumerate(lines, 1):
+            for pattern, kind, direction, role in REMOTE_USES:
+                for m in pattern.finditer(line):
+                    name = _expr_name(line[:m.start()], aliases)
+                    where = f"{rel}:{i}"
+                    if name is None:
+                        unresolved.append(f"{where} ({m.group(1)})")
+                    else:
+                        uses.append({"name": name, "kind": kind, "direction": direction, "role": role,
+                                     "member": m.group(1), "where": where})
+
+    remotes: dict[str, dict] = {}
+    for name, cls, where in declared:
+        r = remotes.setdefault(name, {"name": name, "class": cls, "declared": [], "fired": [], "handled": []})
+        r["declared"].append(where)
+    for u in uses:
+        r = remotes.setdefault(u["name"], {"name": u["name"], "class": None, "declared": [], "fired": [],
+                                           "handled": []})
+        r["fired" if u["role"] == "fire" else "handled"].append(f"{u['where']} ({u['member']})")
+
+    findings = []
+
+    def add(severity: str, name: str, issue: str):
+        findings.append({"severity": severity, "remote": name, "issue": issue})
+
+    for name, r in sorted(remotes.items()):
+        mine = [u for u in uses if u["name"] == name]
+        classes = {REMOTE_CLASSES[c] for _, c, _ in [d for d in declared if d[0] == name]}
+        used_kinds = {u["kind"] for u in mine}
+        if len(classes) == 1 and used_kinds - classes:
+            wrong = sorted({u["member"] for u in mine if u["kind"] not in classes})
+            add("high", name, f"declared as {r['class']} but used with {', '.join(wrong)}, which it doesn't have")
+        for direction, label in (("to_server", "server"), ("to_client", "client")):
+            fired = [u for u in mine if u["direction"] == direction and u["role"] == "fire"]
+            handled = [u for u in mine if u["direction"] == direction and u["role"] == "handle"]
+            if fired and not handled:
+                # Only a declared name is surely a remote; an undeclared one may be a misread variable.
+                add("high" if direction == "to_server" and r["declared"] else "medium", name,
+                    f"fired to the {label} at {fired[0]['where']}, but no {label} handler was found")
+            if handled and not fired:
+                add("low", name, f"has a {label} handler at {handled[0]['where']}, but nothing fires it")
+        if mine and not r["declared"] and not dynamic:
+            add("medium", name, "used in code but not declared in a project or model file or by Instance.new")
+        if r["declared"] and not mine:
+            add("low", name, "declared but never used")
+    if unresolved:
+        findings.append({"severity": "low", "remote": None,
+                         "issue": f"{len(unresolved)} remote uses whose name couldn't be resolved",
+                         "where": unresolved[:10]})
+    shown, hidden = _capped(findings)
+    notes = ["Heuristic: names are matched by text, so a remote reached through a function argument or table is "
+             "listed as unresolved."]
+    if dynamic:
+        notes.append(f"Remotes created without a literal Name at {', '.join(dynamic[:5])}; undeclared-name checks "
+                     "were skipped.")
+    return {"ok": not any(f["severity"] == "high" for f in findings), "files_scanned": len(files),
+            "remotes": sorted(remotes.values(), key=lambda r: r["name"])[:MAX_FINDINGS], "findings": shown,
+            "more_findings": hidden, "notes": notes}
+
+
+# ---------------------------------------------------------------------------------------------
+# Player actions: (pattern, label). Each pattern ends at the "(" whose arguments hold the handler.
+ACTION_RES = (
+    (re.compile(r"\.\s*(Activated|MouseButton1Click|MouseButton1Down|TouchTap)\s*:\s*Connect\s*\("), "button"),
+    (re.compile(r"\.\s*(InputBegan)\s*:\s*Connect\s*\("), "input"),
+    (re.compile(r":\s*(BindAction|BindActionAtPriority)\s*\("), "input"),
+    (re.compile(r"\.\s*(Triggered)\s*:\s*Connect\s*\("), "prompt"),
+    (re.compile(r"\.\s*(Touched)\s*:\s*Connect\s*\("), "touch"),
+    (re.compile(r"\.\s*(OnClientEvent)\s*:\s*Connect\s*\("), "server result"),
+)
+# Something the player sees, hears, or feels: FEEDBACK_RE runs on code with strings blanked, and
+# FEEDBACK_NEW_RE (effect instances) on code with strings kept.
+FEEDBACK_NEW_RE = re.compile(r"Instance\.new\(\s*[\"'](?:Sound|ParticleEmitter|Highlight|Explosion|Beam|Trail|Fire|"
+                             r"Sparkles|Smoke|BillboardGui|SelectionBox)[\"']")
+FEEDBACK_RE = re.compile(
+    r":\s*(?:Play|Emit|LoadAnimation|PlayLocalSound|SetMotor)\s*\("
+    r"|\.\s*(?:Text|Visible|Image|ImageColor3|ImageTransparency|BackgroundColor3|BackgroundTransparency|TextColor3|"
+    r"Size|Position|Rotation|Color|Transparency|Enabled|FieldOfView|Scale)\s*=(?!=)"
+    r"|\.\s*Health\s*=(?!=)|:\s*TakeDamage\s*\(|\bCurrentCamera\b|\bTweenService\b"
+    r"|\b\w*(?:[Ee]ffect|[Ff]eedback|[Jj]uice|[Ss]fx|SFX|[Vv]fx|VFX|[Ss]ound|[Ss]hake|[Ff]lash|[Pp]article|[Tt]ween|"
+    r"[Aa]nimat|[Hh]aptic|[Cc]onfetti|[Pp]opup|[Tt]oast)\w*\s*(?:[.:]\s*\w+\s*)?\(")
+BLOCK_RE = re.compile(r"\b(function|if|do|repeat|end|until)\b")
+LOCAL_FUNCTION_RE = re.compile(r"\b(?:local\s+)?function\s+(?:[\w.]+[.:])?([A-Za-z_]\w*)\s*\(|\blocal\s+([A-Za-z_]\w*)"
+                               r"\s*(?::[^=\n]+)?=\s*function\s*\(")
+REQUIRE_RE = re.compile(r"\blocal\s+([A-Za-z_]\w*)\s*(?::[^=\n]+)?=\s*require\s*\(")
+
+
+def _is_if_expression(code: str, pos: int) -> bool:
+    """Luau's `x = if a then b else c` has no `end`."""
+    before = code[:pos].rstrip()
+    if not before:
+        return False
+    if before[-1] in "=(,{[+-*/%^<>~":
+        return True
+    word = re.search(r"([A-Za-z_]\w*)$", before)
+    return bool(word) and word.group(1) in ("return", "and", "or", "not")
+
+
+def _block_end(code: str, start: int) -> int:
+    """End offset of the block that opens with the keyword at start (function/if/do/repeat)."""
+    depth = 0
+    for m in BLOCK_RE.finditer(code, start):
+        word = m.group(1)
+        if word == "if" and _is_if_expression(code, m.start()):
+            continue
+        depth += 1 if word in ("function", "if", "do", "repeat") else -1
+        if depth == 0:
+            return m.end()
+    return len(code)
+
+
+def _paren_end(code: str, open_pos: int) -> int:
+    depth = 0
+    for i in range(open_pos, len(code)):
+        if code[i] in "([{":
+            depth += 1
+        elif code[i] in ")]}":
+            depth -= 1
+            if depth == 0:
+                return i + 1
+    return len(code)
+
+
+def audit_feel(path: str) -> dict:
+    """Heuristic scan of Luau sources for player actions (button presses, input, prompts, touches, server
+    results) whose handlers give no visible, audible, or haptic feedback. Follows calls to functions defined
+    in the same file; a handler that calls a required module is listed as unverified instead."""
+    root = Path(path).expanduser().resolve()
+    if not root.exists():
+        return {"ok": False, "error": f"not found: {root}"}
+    files = _luau_files(root)
+    findings, unverified = [], []
+    actions = with_feedback = 0
+    for f in files:
+        try:
+            source = f.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        text = _blank_lua(source, strings=False)
+        code = _blank_lua(source, strings=True)
+        rel = _rel(f, root)
+        functions: dict[str, list[tuple[int, int]]] = {}
+        for m in LOCAL_FUNCTION_RE.finditer(code):
+            keyword = code.index("function", m.start())
+            functions.setdefault(m.group(1) or m.group(2), []).append((keyword, _block_end(code, keyword)))
+        modules = set(REQUIRE_RE.findall(code))
+
+        def reach(start: int, end: int, seen: set) -> tuple[bool, set]:
+            """Whether the span (or a same-file function it calls) gives feedback, and the modules it calls."""
+            if FEEDBACK_RE.search(code, start, end) or FEEDBACK_NEW_RE.search(text, start, end):
+                return True, set()
+            called = set()
+            for name in set(re.findall(r"(?<![\w.:])([A-Za-z_]\w*)\s*[.:]\s*\w+\s*\(", code[start:end])) & modules:
+                called.add(name)
+            for name in set(re.findall(r"(?<![\w.:])([A-Za-z_]\w*)", code[start:end])):  # calls and callbacks
+                if name in functions and name not in seen:
+                    seen.add(name)
+                    for s, e in functions[name]:
+                        found, more = reach(s, e, seen)
+                        if found:
+                            return True, set()
+                        called |= more
+            return False, called
+
+        for pattern, label in ACTION_RES:
+            for m in pattern.finditer(code):
+                actions += 1
+                open_pos = m.end() - 1
+                found, called = reach(open_pos, _paren_end(code, open_pos), set())
+                where = f"{rel}:{_line_of(code, m.start())}"
+                if found:
+                    with_feedback += 1
+                elif called:
+                    unverified.append({"where": where, "action": m.group(1),
+                                       "feedback_may_be_in": sorted(called)})
+                else:
+                    findings.append({"where": where, "action": m.group(1), "kind": label,
+                                     "issue": "no feedback in the handler: respond at once with a sound, tween, "
+                                              "particles, or a UI change, even before the server confirms"})
+    shown, hidden = _capped(findings)
+    return {"ok": not findings, "files_scanned": len(files), "actions": actions, "with_feedback": with_feedback,
+            "findings": shown, "more_findings": hidden, "unverified": unverified[:MAX_FINDINGS],
+            "note": "Heuristic: finds whether feedback exists in each handler, not whether it feels good. Check "
+                    "timing and strength in a play test."}

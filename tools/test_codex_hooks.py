@@ -360,6 +360,13 @@ class CreativeBrief(HookCase):
                      "make the log level configurable"):
             self.assertIsNone(self.prompt(text), text)
 
+    def test_roblox_guidance(self):
+        self.assertIn("Roblox:", self.context(self.prompt("build me an obby with 10 stages")))
+        self.assertNotIn("Roblox:", self.context(self.prompt("Make a roguelike about a lighthouse keeper")))
+        make_roblox(self.root)
+        self.assertIn("map_remotes", self.context(self.prompt("add a new level with moving platforms")))
+        self.assertIsNone(self.prompt("rename the remote events"))
+
     def test_level_words_count_only_in_a_game_project(self):
         self.assertIsNone(self.prompt("add a new level with moving platforms"))
         make_godot(self.root)
@@ -394,6 +401,14 @@ class UnfinishedWork(HookCase):
         write(self.root, "README.md", "lor" + "em ipsum dolor\n")
         git(self.root, "add", "-A")
         self.assertIn("README.md:1: error: filler text", self.stop()["reason"])
+
+    def test_roblox_stand_ins(self):
+        write(self.root, "src/client/Shop.client.luau", 'icon.Image = "rbxasset' + 'id://0"\nbuy.Text = "Butt' + 'on"\n'
+              'icon.Image = "rbxasset' + 'id://" .. item.icon\n')
+        reason = self.stop()["reason"]
+        self.assertIn("src/client/Shop.client.luau:1: error: a Roblox asset ID that points at nothing", reason)
+        self.assertIn("src/client/Shop.client.luau:2: error: a default or class-name UI label", reason)
+        self.assertNotIn("Shop.client.luau:3", reason)
 
     def test_tests_and_ordinary_todos_are_fine(self):
         write(self.root, "tests/test_text.py", 'SAMPLE = "lor' + 'em ipsum"\n')

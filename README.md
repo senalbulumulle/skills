@@ -45,14 +45,14 @@ Codex shows these in its skill picker with a display name and default prompt (`p
 
 | Server | Tools | Setup |
 | --- | --- | --- |
-| [roblox-forge](mcp/roblox-forge/README.md) | `create_project`, `check_project`, `audit_remotes`, `check_odds`, `datastore_budget`, `luau_check` | one server for Claude Code and Codex; see its README |
+| [roblox-forge](mcp/roblox-forge/README.md) | `create_project`, `check_project`, `map_remotes`, `audit_remotes`, `audit_feel`, `check_odds`, `datastore_budget`, `luau_check` | one server for Claude Code and Codex; see its README |
 | [creative-director](mcp/creative-director/README.md) | `concept_seeds`, `review_design`, `find_slop` | one server for Claude Code and Codex; see its README |
 
 ## Hooks
 
 | Hooks | Platform | What they do |
 | --- | --- | --- |
-| [game hooks](platforms/codex/hooks/README.md) | Codex | Detect the engine (Unreal, Unity, Godot, Roblox/Rojo, and more). Add its rules at session start, add a creative brief to game requests, block publishing and edits to binary or generated files, check edited files, and stop the agent once if errors or unfinished content remain |
+| [game hooks](platforms/codex/hooks/README.md) | Codex | Detect the engine (Unreal, Unity, Godot, Roblox/Rojo, and more). Add its rules at session start, add a creative brief to game requests (with Roblox guidance for Roblox work), block publishing and edits to binary or generated files, check edited files, and stop the agent once if errors or unfinished content remain |
 
 ## Codex profile and models
 
@@ -83,7 +83,7 @@ To run every development check (see AGENTS.md): Node.js 22+, [Luau](https://gith
 
 ## Install
 
-For Codex, one script installs everything globally: the skills, the game hooks, the `game` profile with its agent roles, and the creative-director MCP server.
+For Codex, one script installs everything globally: the skills, the game hooks, the `game` profile with its agent roles, and the creative-director and roblox-forge MCP servers.
 
 ```sh
 scripts/codex/install-codex.sh          # all four components
@@ -96,7 +96,7 @@ scripts/codex/uninstall-codex.sh        # removes only what these scripts instal
 | `scripts/codex/install-codex-skills.sh [name ...]` | Skills only (all, or the named ones), validated first |
 | `scripts/codex/install-codex-hooks.sh [--dry-run]` | Game hooks only. Other hooks in `hooks.json` are kept |
 | `scripts/codex/install-codex-profile.sh [--model SLUG] [--dry-run]` | `~/.codex/game.config.toml` and the agent roles. Never overwrites files you wrote |
-| `scripts/codex/install-codex-mcp.sh` | Registers the creative-director MCP server with `codex mcp add` |
+| `scripts/codex/install-codex-mcp.sh` | Registers the creative-director and roblox-forge MCP servers with `codex mcp add` |
 | `scripts/codex/uninstall-codex.sh [--only ...]` | Removes this repo's skill links, hook handlers, profile, roles, and MCP registration |
 
 They need `uv`, `python3` 3.9 or newer, and `codex` (for the MCP step). After installing, run `/hooks` once in Codex to trust the game hooks, because Codex skips untrusted hooks. Start a session with the profile with `codex -p game`. The hooks and MCP server run from this checkout, so re-run the script if you move the repo.

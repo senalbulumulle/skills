@@ -4,7 +4,7 @@
 Codex runs: python3 game_hooks.py <SessionStart|UserPromptSubmit|PreToolUse|PostToolUse|Stop>
 with the event JSON on stdin, and reads JSON from stdout. Standard library only, Python 3.9+.
 Engine checks run only inside a game project. In any project, a request to build a game gets a short
-creative brief, and Stop checks lines added since the last commit for unfinished or generic content.
+creative brief (plus Roblox guidance for Roblox requests and projects), and Stop checks lines added since the last commit for unfinished or generic content.
 An internal error never blocks the agent: the hook prints a note to stderr and exits 0 with no output.
 """
 from __future__ import annotations
@@ -198,7 +198,7 @@ ENGINES = {
             "The server owns every outcome: validate and rate-limit every RemoteEvent/RemoteFunction argument.",
             'Use task.wait/task.spawn/task.delay and game:GetService("Name"), never wait()/spawn()/delay() or game.Name.',
             "Save data with UpdateAsync under a session lock; kick on load failure instead of playing on defaults.",
-            "If the roblox-forge MCP server is connected, run check_project after layout changes and audit_remotes after remote changes.",
+            "If the roblox-forge MCP server is connected, run check_project after layout changes, map_remotes and audit_remotes after remote changes, and audit_feel after gameplay or UI changes.",
             "Never publish (rojo upload, mantle deploy, rbxcloud): the user does that.",
         ],
     },
@@ -460,6 +460,12 @@ UNFINISHED_RULES = (
     ("generic-title", re.compile(r"[\"'>#]\s*(?:My|Untitled|Awesome|Amazing|Epic|Cool) (?:Game|Adventure|Quest|Project)"
                                  r"\b"),
      "a generic title; name it after what makes it different"),
+    ("fake-asset-id", re.compile(r"(?:rbxasset" + r"id://|roblox\.com/asset/\?id=)(?:(?:0+|"
+                                 + "|".join("1234567890"[:n] for n in range(10, 2, -1))
+                                 + r")(?!\w)|(?=[\"'](?!\s*(?:\.\.|\+))))"),
+     "a Roblox asset ID that points at nothing; upload the real asset or leave the property unset"),
+    ("default-ui-text", re.compile(r"\bText\s*=\s*[\"'](?:Label|Button|Text" + "Label|Text" + "Button|Text" + r"Box)[\"']"),
+     "a default or class-name UI label; write what the player should read"),
 )
 GAME_REQUEST_RE = re.compile(r"\b(?:games?|gameplay|minigames?|boss(?:es)?|enem(?:y|ies)|platformer|shooter|roguelike|"
                              r"rpg|obby|tycoon|simulator|npcs?|quests?)\b", re.I)
@@ -470,6 +476,11 @@ CREATIVE_BRIEF = ("Creative brief (from game_hooks): commit to one specific idea
                   "a friend. Use real names, numbers, and text that fit the world, never stand-ins. Get the smallest "
                   "playable version running, make input feel instant and give every action visible and audible "
                   "feedback, then build or run it to verify before you finish.")
+ROBLOX_RE = re.compile(r"\b(?:roblox|rojo|obby|obbies)\b", re.I)
+ROBLOX_BRIEF = ("Roblox: assume many players are on phones (default thumbstick and jump, a few large buttons sized "
+                "with Scale) and give them a reason to play together. A new player should act within 10 seconds and "
+                "earn something within 60. The server decides every outcome. If roblox-forge is connected, run "
+                "map_remotes and audit_feel on the project before you finish.")
 MAX_LINE_SHOWN = 100
 
 
@@ -727,11 +738,15 @@ def on_user_prompt_submit(event: dict) -> Optional[dict]:
     prompt = event.get("prompt")
     if not isinstance(prompt, str) or not CREATIVE_VERB_RE.search(prompt):
         return None
-    if not GAME_REQUEST_RE.search(prompt):
-        in_game_project = LEVEL_RE.search(prompt) and detect_all(Path(event.get("cwd") or os.getcwd()))
-        if not in_game_project:
-            return None
-    return {"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": CREATIVE_BRIEF}}
+    if not GAME_REQUEST_RE.search(prompt) and not LEVEL_RE.search(prompt):
+        return None
+    projects = detect_all(Path(event.get("cwd") or os.getcwd()))
+    if not GAME_REQUEST_RE.search(prompt) and not projects:
+        return None  # level and mechanic words mean a game only inside a game project
+    brief = CREATIVE_BRIEF
+    if ROBLOX_RE.search(prompt) or any(p.engine == "roblox" for p in projects):
+        brief += "\n" + ROBLOX_BRIEF
+    return {"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": brief}}
 
 
 def on_pre_tool_use(event: dict) -> Optional[dict]:

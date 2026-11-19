@@ -16,6 +16,7 @@ REPO = Path(__file__).resolve().parent.parent
 SCRIPTS = REPO / "scripts" / "codex"
 SKILLS = sorted(p.name for p in (REPO / "skills").iterdir() if (p / "SKILL.md").is_file())
 SERVER = str(REPO / "mcp" / "creative-director" / "server.py")
+FORGE = str(REPO / "mcp" / "roblox-forge" / "server.py")
 
 # Emulates the codex subcommands the scripts use. MCP registrations live in $CODEX_HOME/fake-mcp.json.
 FAKE_CODEX = textwrap.dedent(f"""\
@@ -106,6 +107,7 @@ class InstallScripts(unittest.TestCase):
         self.assertEqual(sorted(p.name for p in (self.codex_home / "agents").iterdir()),
                          ["game-critic.toml", "game-designer.toml", "my-role.toml"])
         self.assertEqual(self.mcp()["creative-director"]["args"], ["run", "--quiet", "--script", SERVER])
+        self.assertEqual(self.mcp()["roblox-forge"]["args"], ["run", "--quiet", "--script", FORGE])
 
         proc = self.run_script("uninstall-codex.sh")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
@@ -177,6 +179,7 @@ class InstallScripts(unittest.TestCase):
         proc = self.run_script("install-codex-mcp.sh")
         self.assertEqual(proc.returncode, 1)
         self.assertIn("runs something else", proc.stderr)
+        self.assertIn("roblox-forge", self.mcp())  # the other server is still registered
         proc = self.run_script("install-codex-mcp.sh", "--uninstall")
         self.assertEqual(proc.returncode, 0)
         self.assertIn("left alone", proc.stderr)

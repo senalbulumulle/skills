@@ -3,7 +3,7 @@
 #   skills   skill links in ~/.agents/skills/ that point into this repo (other skills are kept)
 #   hooks    game_hooks.py handlers in $CODEX_HOME/hooks.json (other hooks are kept)
 #   profile  game.config.toml and the agent roles this repo installed (files you wrote are kept)
-#   mcp      the creative-director MCP server, if it points at this checkout
+#   mcp      the creative-director and roblox-forge MCP servers, if they point at this checkout
 #
 #   scripts/codex/uninstall-codex.sh                      all four
 #   scripts/codex/uninstall-codex.sh --only skills,hooks  just the ones listed

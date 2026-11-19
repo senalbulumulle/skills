@@ -1,6 +1,7 @@
 -- Client entry point: builds a small HUD and sends requests. Never decides outcomes.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local claimDaily = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ClaimDaily") :: RemoteEvent
@@ -22,7 +23,14 @@ local aspect = Instance.new("UIAspectRatioConstraint")
 aspect.AspectRatio = 4
 aspect.Parent = button
 
+local scale = Instance.new("UIScale")
+scale.Parent = button
+local pop = TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+
 button.Activated:Connect(function() -- fires for mouse, touch, and gamepad
+	-- Answer the press at once; the server decides the reward and updates leaderstats.
+	scale.Scale = 0.9
+	TweenService:Create(scale, pop, { Scale = 1 }):Play()
 	claimDaily:FireServer()
 end)
 

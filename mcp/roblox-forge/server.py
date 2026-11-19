@@ -7,7 +7,8 @@
 
 It complements Roblox Studio's built-in MCP server (live editing, play testing, console output)
 with checks that work on the project files: scaffolding, Rojo project validation, remote security
-audit, paid-random-item odds, DataStore budget, and Luau type checking.
+audit, a map of every remote, a game-feel audit, paid-random-item odds, DataStore budget, and Luau
+type checking.
 
 Run: uv run --script server.py   (stdio transport; register it with Claude Code or Codex, see README.md)
 """
@@ -25,8 +26,9 @@ server = MCPServer(
     version="1.0.0",
     instructions=(
         "Offline tools for Rojo-based Roblox projects. Pass absolute paths. Use check_project after "
-        "changing the project layout, audit_remotes before publishing, check_odds for any paid random "
-        "item, datastore_budget when changing save frequency, and luau_check on pure modules. For live "
+        "changing the project layout, map_remotes and audit_remotes after adding or renaming remotes, "
+        "audit_feel after changing gameplay or UI, check_odds for any paid random item, datastore_budget "
+        "when changing save frequency, and luau_check on pure modules. For live "
         "Studio actions (play, console output, running code), use Roblox Studio's own MCP server."
     ),
 )
@@ -56,6 +58,22 @@ def audit_remotes(path: str) -> dict:
     """Scan Luau files under `path` for RemoteEvent/RemoteFunction handlers without a validation wrapper,
     InvokeClient use, and FireServer calls that send values the server should decide. Heuristic."""
     return forge.audit_remotes(path)
+
+
+@server.tool(annotations=READ_ONLY)
+def map_remotes(path: str) -> dict:
+    """List every RemoteEvent and RemoteFunction in a Rojo project with where it is declared, fired, and
+    handled. Flags remotes fired with no handler on the other side, handlers nothing fires, Fire/Invoke
+    calls on the wrong remote class, and names used in code but never declared. Heuristic name matching."""
+    return forge.map_remotes(path)
+
+
+@server.tool(annotations=READ_ONLY)
+def audit_feel(path: str) -> dict:
+    """Find player actions (button presses, input bindings, ProximityPrompts, touches, server results)
+    whose handlers give no feedback: no sound, tween, particles, animation, camera, or UI change. Follows
+    functions in the same file; handlers that call required modules are listed as unverified. Heuristic."""
+    return forge.audit_feel(path)
 
 
 @server.tool(annotations=READ_ONLY)

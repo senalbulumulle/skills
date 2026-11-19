@@ -37,6 +37,12 @@ UNFINISHED_RULES = (
     ("generic-title", re.compile(r"[\"'>#]\s*(?:My|Untitled|Awesome|Amazing|Epic|Cool) (?:Game|Adventure|Quest|Project)"
                                  r"\b"),
      "a generic title; name it after what makes it different"),
+    ("fake-asset-id", re.compile(r"(?:rbxasset" + r"id://|roblox\.com/asset/\?id=)(?:(?:0+|"
+                                 + "|".join("1234567890"[:n] for n in range(10, 2, -1))
+                                 + r")(?!\w)|(?=[\"'](?!\s*(?:\.\.|\+))))"),
+     "a Roblox asset ID that points at nothing; upload the real asset or leave the property unset"),
+    ("default-ui-text", re.compile(r"\bText\s*=\s*[\"'](?:Label|Button|Text" + "Label|Text" + "Button|Text" + r"Box)[\"']"),
+     "a default or class-name UI label; write what the player should read"),
 )
 
 # Phrases that describe a game or product without saying anything specific.
@@ -49,19 +55,39 @@ VAGUE_PHRASES = (
 )
 VAGUE_RE = re.compile(r"\b(?:" + "|".join(re.escape(p) for p in VAGUE_PHRASES) + r")", re.I)
 
-# A design doc should answer these; each is found by a heading that matches the pattern.
+# A design doc should answer these; each is found by a heading (or **Label:**) that matches the pattern.
+FIRST_MINUTE = r"first (?:minute|session|30|thirty|60|sixty|level)|onboarding|tutorial|opening"
+SCOPE = r"scope|mvp|milestone|\bcut\b|later|backlog"
 DESIGN_SECTIONS = (
     ("fantasy", r"fantasy|pitch|premise|concept|logline|elevator", "who the player is and what they get to do"),
-    ("core_loop", r"core loop|gameplay loop|\bloop\b", "the repeated verbs and what each cycle rewards"),
+    ("core_loop", r"core loop|gameplay loop|\bloops?\b", "the repeated verbs and what each cycle rewards"),
     ("hook", r"hook|twist|unique|different|\busp\b", "the one thing a player would describe to a friend"),
     ("controls", r"control|input", "every input and what it does"),
     ("win_fail", r"\bwin|\bfail|\blose|goal|objective|game over|victory|death", "how a run or round ends, both ways"),
-    ("first_minute", r"first (?:minute|session|30|thirty|level)|onboarding|tutorial|opening",
-     "what happens in the first minute of play"),
+    ("first_minute", FIRST_MINUTE, "what happens in the first minute of play"),
     ("feedback", r"feedback|juice|game feel|\bfeel\b|polish", "what the player sees and hears on each action"),
     ("progression", r"progression|difficulty|economy|upgrade|levels?\b|pacing", "how it changes over time"),
-    ("scope", r"scope|mvp|milestone|\bcut\b|later|backlog", "what ships first and what waits"),
+    ("scope", SCOPE, "what ships first and what waits"),
 )
+# A Roblox brief (skills/roblox-game-design/assets/roblox-brief.md) answers these instead.
+ROBLOX_SECTIONS = (
+    ("hook", r"hook|twist|pitch|premise|concept|logline", "the one sentence a player would tell a friend"),
+    ("first_minute", FIRST_MINUTE, "what a new player sees, does, and earns in the first 60 seconds"),
+    ("loops", r"\bloops?\b|retention|reason to return", "the short, session, and long loops, and the reason to return"),
+    ("social", r"social|multiplayer|co-?op|friends|party|together|trading", "why playing with others is better"),
+    ("devices", r"device|touch|mobile|phone|console", "which devices it targets, phones included"),
+    ("controls", r"control|input", "every action on touch, keyboard and mouse, and gamepad"),
+    ("comparables", r"closest|comparable|existing experiences|similar|inspiration|competitor",
+     "the closest existing experiences and how this one differs"),
+    ("monetization", r"moneti[sz]|game pass|developer product|robux|\bshop\b",
+     "what is sold, for how much, and why it is fair"),
+    ("scope", SCOPE, "what ships first and what waits"),
+)
+SECTIONS = {"game": DESIGN_SECTIONS, "roblox": ROBLOX_SECTIONS}
+RANDOM_ITEM_RE = re.compile(r"loot ?box|\bcrates?\b|\beggs?\b|gacha|\bspins?\b|mystery box|random (?:items?|rewards?|pets?)",
+                            re.I)
+PERCENT_RE = re.compile(r"\d(?:\.\d+)?\s?%")
+BOLD_LABEL_RE = re.compile(r"\*\*([^*\n]{1,40}?):\*\*")
 HEADING_RE = re.compile(r"^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$|^(.+)\n(?:=+|-+)\s*$", re.M)
 LIST_MARKER_RE = re.compile(r"^\s*\d+[.)]\s", re.M)
 NUMBER_RE = re.compile(r"(?<![\w.])\d+(?:\.\d+)?(?:\s?(?:%|s|ms|px|m|hp|x)\b)?")
@@ -177,17 +203,22 @@ def find_slop(paths: list[str], include_tests: bool = False) -> dict:
 
 
 # ---------------------------------------------------------------------------------------------
-def review_design(text: str | None = None, path: str | None = None) -> dict:
-    """Check a game design doc for the decisions a team needs before building, vague phrases, and tuning numbers."""
+def review_design(text: str | None = None, path: str | None = None, platform: str = "game") -> dict:
+    """Check a game design doc for the decisions a team needs before building, vague phrases, and tuning numbers.
+    platform "roblox" checks for the sections of a Roblox brief instead, and for odds on random items."""
     if (text is None) == (path is None):
         return {"ok": False, "error": "pass exactly one of text or path"}
+    if platform not in SECTIONS:
+        return {"ok": False, "error": f"platform must be one of: {', '.join(SECTIONS)}"}
     if path is not None:
         text = _read(Path(path).expanduser())
         if text is None:
             return {"ok": False, "error": f"cannot read {path} as text"}
-    headings = [(m.group(1) or m.group(2)).strip() for m in HEADING_RE.finditer(text)]
+    found = [(m.start(), (m.group(1) or m.group(2)).strip()) for m in HEADING_RE.finditer(text)]
+    found += [(m.start(), m.group(1).strip()) for m in BOLD_LABEL_RE.finditer(text)]
+    headings = [h for _, h in sorted(found)]
     sections, missing = {}, []
-    for key, pattern, question in DESIGN_SECTIONS:
+    for key, pattern, question in SECTIONS[platform]:
         match = next((h for h in headings if re.search(pattern, h, re.I)), None)
         sections[key] = match
         if match is None:
@@ -200,6 +231,9 @@ def review_design(text: str | None = None, path: str | None = None) -> dict:
         notes.append("No headings found; give each decision its own heading so it can be found and checked.")
     if numbers < 5:
         notes.append(f"Only {numbers} numbers; add tuning values (speeds, timings, costs, counts) the build can use.")
+    if platform == "roblox" and RANDOM_ITEM_RE.search(text) and not PERCENT_RE.search(text):
+        notes.append("Random items are mentioned but no odds are given. If players pay for them, list every outcome "
+                     "with odds summing to 100% (roblox-forge check_odds verifies them).")
     shown_vague, _ = _capped(vague)
     return {"ok": not missing and not vague and not unfinished and numbers >= 5, "sections": sections,
             "missing": missing, "vague": shown_vague, "unfinished": unfinished[:MAX_FINDINGS], "numbers": numbers,

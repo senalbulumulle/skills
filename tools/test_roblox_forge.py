@@ -167,6 +167,120 @@ class OddsAndBudgetTests(unittest.TestCase):
         self.assertFalse(forge.datastore_budget(0)["ok"])
 
 
+class MapRemotesTests(ForgeTestCase):
+    def test_template_remote_is_declared_fired_and_handled(self):
+        dest = self.root / "game"
+        forge.create_project(str(dest), "Game")
+        r = forge.map_remotes(str(dest))
+        self.assertTrue(r["ok"], r)
+        self.assertEqual(r["findings"], [])
+        [remote] = r["remotes"]
+        self.assertEqual((remote["name"], remote["class"]), ("ClaimDaily", "RemoteEvent"))
+        self.assertEqual(remote["fired"], ["src/client/Main.client.luau:34 (FireServer)"])
+        self.assertEqual(remote["handled"], ["src/server/Main.server.luau:52 (OnServerEvent)"])
+
+    def test_mismatches(self):
+        remotes = {"$className": "Folder", **{n: {"$className": c} for n, c in (
+            ("Buy", "RemoteEvent"), ("Ask", "RemoteFunction"), ("Notify", "RemoteEvent"), ("Unused", "RemoteEvent"))}}
+        d = self.project({"$className": "DataModel", "ReplicatedStorage": {
+            "$className": "ReplicatedStorage", "Remotes": remotes, "Shared": {"$path": "src/shared"}}}, {
+            "src/shared/Ping.model.json": json.dumps({"ClassName": "RemoteEvent"}),
+            "src/server/Main.server.luau": (
+                'local Remotes = game:GetService("ReplicatedStorage").Remotes\n'
+                "Remotes.Buy.OnServerEvent:Connect(function(player) end)\n"
+                "Remotes.Ask:FireClient(player)\n"
+                'Remotes.Notify:FireAllClients("hi")\n'
+                'local made = Instance.new("RemoteEvent")\n'
+                'made.Name = "Made"\n'
+                "made.OnServerEvent:Connect(function() end)\n"
+                "-- Remotes.Ghost:FireServer()\n"),
+            "src/client/Main.client.luau": (
+                'local remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")\n'
+                'local buy = remotes:WaitForChild("Buy") :: RemoteEvent\n'
+                "buy:FireServer(1)\n"
+                'remotes:WaitForChild("Ping"):FireServer()\n'
+                "remotes.Typo:FireServer()\n"
+                "self.remote:FireServer()\n"),
+        })
+        r = forge.map_remotes(str(d))
+        self.assertFalse(r["ok"])
+        found = {(f["severity"], f["remote"], f["issue"].split(" at ")[0].split(",")[0]) for f in r["findings"]}
+        self.assertEqual(found, {
+            ("high", "Ask", "declared as RemoteFunction but used with FireClient"),
+            ("medium", "Ask", "fired to the client"),
+            ("medium", "Notify", "fired to the client"),
+            ("low", "Made", "has a server handler"),
+            ("low", "Unused", "declared but never used"),
+            ("high", "Ping", "fired to the server"),
+            ("medium", "Typo", "fired to the server"),
+            ("medium", "Typo", "used in code but not declared in a project or model file or by Instance.new"),
+            ("low", None, "1 remote uses whose name couldn't be resolved"),
+        })
+        by_name = {x["name"]: x for x in r["remotes"]}
+        self.assertNotIn("Ghost", by_name)  # commented out
+        self.assertEqual(by_name["Buy"]["fired"], ["src/client/Main.client.luau:3 (FireServer)"])
+        self.assertEqual(by_name["Ping"]["declared"], ["src/shared/Ping.model.json"])
+        self.assertEqual(by_name["Made"]["declared"], ["src/server/Main.server.luau:5"])
+
+    def test_remotes_created_in_a_loop_skip_the_undeclared_check(self):
+        f = self.root / "Remotes.server.luau"
+        f.write_text('for _, name in { "Buy", "Sell" } do\n\tremotes[name] = Instance.new("RemoteEvent")\nend\n'
+                     "remotes.Buy.OnServerEvent:Connect(function() end)\n")
+        r = forge.map_remotes(str(f))
+        self.assertEqual([x["issue"] for x in r["findings"]],
+                         ["has a server handler at Remotes.server.luau:4, but nothing fires it"])
+        self.assertTrue(any("without a literal Name" in n for n in r["notes"]))
+        self.assertFalse(forge.map_remotes(str(self.root / "missing"))["ok"])
+
+
+class AuditFeelTests(ForgeTestCase):
+    def test_template_button_gives_feedback(self):
+        dest = self.root / "game"
+        forge.create_project(str(dest), "Game")
+        r = forge.audit_feel(str(dest))
+        self.assertTrue(r["ok"], r)
+        self.assertEqual((r["actions"], r["with_feedback"]), (1, 1))
+
+    def test_handlers_with_and_without_feedback(self):
+        f = self.root / "Ui.client.luau"
+        f.write_text("\n".join([
+            "local Hud = require(script.Parent.Hud)",
+            "local function pop(button)",
+            "\tbutton.Size = UDim2.fromScale(0.3, 0.1)",
+            "end",
+            "local function onJump(_, state)",
+            "\tif state == Enum.UserInputState.Begin then",
+            "\t\tpop(jumpButton)",
+            "\tend",
+            "end",
+            "local function quiet(x)",
+            "\tlocal v = if x then 1 else 2",
+            "\treturn v",
+            "end",
+            "a.Activated:Connect(function()",  # 14: only asks the server
+            "\tremote:FireServer()",
+            "end)",
+            "b.Activated:Connect(function() pop(b) end)",  # 17: feedback through a local function
+            'ContextActionService:BindAction("Jump", onJump, true, Enum.KeyCode.Space)',  # 18: callback reference
+            "c.Activated:Connect(function() Hud.refresh(c) end)",  # 19: may happen in the module
+            "d.Activated:Connect(quiet)",  # 20: the if-expression must not swallow the rest of the file
+            'e.Activated:Connect(function() print("x.Visible = true") -- tween:Play()',  # 21: text and comments
+            "end)",
+            'f.Touched:Connect(function(hit) hit.Parent.Humanoid.Health = 0 end)',  # 23: damage is visible
+            'g.Triggered:Connect(function() local s = Instance.new("Sound") s.Parent = g end)',  # 24
+            "g.Visible = true",
+        ]) + "\n")
+        r = forge.audit_feel(str(f))
+        self.assertFalse(r["ok"])
+        self.assertEqual(r["actions"], 8)
+        self.assertEqual(r["with_feedback"], 4)
+        self.assertEqual([x["where"] for x in r["findings"]], ["Ui.client.luau:14", "Ui.client.luau:20",
+                                                               "Ui.client.luau:21"])
+        self.assertEqual(r["unverified"], [{"where": "Ui.client.luau:19", "action": "Activated",
+                                            "feedback_may_be_in": ["Hud"]}])
+        self.assertFalse(forge.audit_feel(str(self.root / "missing"))["ok"])
+
+
 @unittest.skipUnless(shutil.which("luau-analyze"), "luau-analyze not installed")
 class LuauCheckTests(ForgeTestCase):
     def test_clean_and_broken_files(self):

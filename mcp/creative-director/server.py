@@ -43,11 +43,13 @@ def concept_seeds(count: int = 3, seed: int | None = None, genre: str | None = N
 
 
 @server.tool(annotations=READ_ONLY)
-def review_design(text: str | None = None, path: str | None = None) -> dict:
-    """Check a game design doc (Markdown `text`, or a file `path`; pass one) for headings that answer: player
-    fantasy, core loop, hook, controls, win and fail states, first minute, feedback, progression, scope.
-    Also reports vague phrases, unfinished content, and how many tuning numbers it gives."""
-    return director.review_design(text, path)
+def review_design(text: str | None = None, path: str | None = None, platform: str = "game") -> dict:
+    """Check a game design doc (Markdown `text`, or a file `path`; pass one) for headings or **Label:** lines
+    that answer: player fantasy, core loop, hook, controls, win and fail states, first minute, feedback,
+    progression, scope. With `platform` "roblox", checks a Roblox brief instead: hook, first minute, loops,
+    social hook, devices, controls, closest existing experiences, monetization, scope, and odds for random
+    items. Also reports vague phrases, unfinished content, and how many tuning numbers it gives."""
+    return director.review_design(text, path, platform)
 
 
 @server.tool(annotations=READ_ONLY)

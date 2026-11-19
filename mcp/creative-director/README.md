@@ -5,8 +5,8 @@ Checks that keep game and software work specific instead of generic. Works with 
 | Tool | What it does |
 | --- | --- |
 | `concept_seeds` | Random, reproducible concept constraints (a core verb, a twist, a setting, a feeling) for brainstorming past the first obvious idea |
-| `review_design` | Checks a game design doc for headings covering fantasy, core loop, hook, controls, win and fail, first minute, feedback, progression, and scope. Also flags vague marketing phrases, unfinished content, and a lack of tuning numbers |
-| `find_slop` | Scans files or folders for unfinished or generic content: filler text, stubs left in place of code, marker comments standing in for work, stand-in UI text, generic titles, and vague phrases in Markdown and text files. Skips dependency, build, engine-cache, and test folders |
+| `review_design` | Checks a game design doc for headings (or `**Label:**` lines) covering fantasy, core loop, hook, controls, win and fail, first minute, feedback, progression, and scope. With `platform: "roblox"` it checks a Roblox brief instead (hook, first minute, loops, social hook, devices, controls, closest existing experiences, monetization, scope) and asks for odds when random items are mentioned. Also flags vague marketing phrases, unfinished content, and a lack of tuning numbers |
+| `find_slop` | Scans files or folders for unfinished or generic content: filler text, stubs left in place of code, marker comments standing in for work, stand-in UI text, generic titles, Roblox asset IDs that point at nothing, Roblox's default UI labels, and vague phrases in Markdown and text files. Skips dependency, build, engine-cache, and test folders |
 
 All checks are word-list heuristics. They point the agent at likely problems, and the agent decides. The Codex game hooks run the same unfinished-content rules at `Stop`, and a test keeps both rule sets identical.
 

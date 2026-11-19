@@ -6,7 +6,9 @@ Offline tools for building Roblox games with Rojo. It complements Roblox Studio'
 | --- | --- | --- |
 | `create_project` | Scaffolds a Rojo project from the `roblox-scripting` template (session-locked saves, validated remotes, entry scripts) | yes, in an empty or new folder only |
 | `check_project` | Validates `default.project.json`: missing `$path` targets, multiple init scripts in one folder, Scripts or LocalScripts mapped where Roblox won't run them, duplicate names, plus a real `rojo build` if Rojo is installed | no |
+| `map_remotes` | Lists every RemoteEvent and RemoteFunction with where it is declared, fired, and handled. Flags remotes fired with no handler on the other side, handlers nothing fires, `Fire`/`Invoke` on the wrong remote class, and names used in code but never declared (heuristic) | no |
 | `audit_remotes` | Flags remote handlers without a validation wrapper, `InvokeClient` use, and `FireServer` calls that send values the server should decide (heuristic) | no |
+| `audit_feel` | Finds player actions (button presses, input bindings, ProximityPrompts, touches, server results) whose handlers give no feedback: no sound, tween, particles, animation, camera, or UI change. Follows functions in the same file; handlers that call required modules are listed as unverified (heuristic) | no |
 | `check_odds` | Checks paid random item odds against Roblox policy (all outcomes, percentages summing to 100%, rounding disclaimer) | no |
 | `datastore_budget` | Estimates a server's DataStore requests per minute against the documented default budget | no |
 | `luau_check` | Runs `luau-analyze` (strict by default) on files or folders | no |
@@ -35,6 +37,7 @@ Or share it with a game project by adding `.mcp.json` to that project's root:
 Check with `claude mcp list`, or `/mcp` inside a session.
 
 ## Codex
+`scripts/codex/install-codex-mcp.sh` registers it (and creative-director) and downloads the SDK ahead of the first session. Or by hand:
 ```sh
 codex mcp add roblox-forge -- uv run --quiet --script /path/to/skills/mcp/roblox-forge/server.py
 ```
