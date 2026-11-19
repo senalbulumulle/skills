@@ -10,4 +10,4 @@
 - Hooks: `hooks/` has engine-aware game-dev hooks (`install.py`) and `discover.py`, which lists the hook events and outputs the installed Codex binary supports.
 - Profile and roles: `profile/` has the `codex -p game` profile and the game-designer and game-critic agent roles.
 - Models: `models/` compares the models in Codex's catalog (Sol, Astra, Luna, Terra) without printing their instructions.
-- Install everything: `scripts/codex/install-codex.sh` (see the repository README).
+- Install everything: `scripts/codex/install-codex.sh` (`--help` lists the options).
