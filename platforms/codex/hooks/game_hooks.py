@@ -9,6 +9,7 @@ An internal error never blocks the agent: the hook prints a note to stderr and e
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -564,6 +565,16 @@ POLISH_BRIEF = ("Roblox polish: layer each important moment (particles, a sound,
                 "uploads, or IDs found with Roblox Studio's search_asset tool; never invent an asset ID. If roblox-forge "
                 "is connected, start effects from vfx_recipe and run audit_polish and audit_feel before you finish. If "
                 "Roblox Studio's MCP server is connected, play-test with start_stop_play and look with screen_capture.")
+# "character" alone usually means the player's avatar in Roblox, so only character-writing phrases count.
+STORY_RE = re.compile(r"\b(?:npcs?|dialog(?:ue)?s?|story|stories|storylines?|narrative|quests?|cutscenes?|lore|"
+                      r"backstor(?:y|ies)|voice[- ]?overs?|voice lines?|cast of characters|"
+                      r"characters? (?:sheets?|bios?|arcs?|profiles?|personalit(?:y|ies)))\b", re.I)
+STORY_BRIEF = ("Roblox story: write the Markdown docs first (characters.md with a distinct voice and a vo direction "
+               "per character, story.md with premise, acts, and the flags game code sets, and one dialogue/<id>.md per "
+               "conversation), keep lines under 100 characters for phones, and give every node a way out. If "
+               "roblox-forge is connected, run review_story until it is clean, then build_dialogue, export_voiceover, "
+               "and export_localization; play the result with DialogueRunner on the server. Never hand-edit the "
+               "generated dialogue module: change the docs and rebuild.")
 MAX_LINE_SHOWN = 100
 
 
@@ -623,6 +634,74 @@ def unfinished_issues(cwd: Path) -> list[Issue]:
         for _rule, pattern, message in UNFINISHED_RULES:
             if pattern.search(text):
                 issues.append(Issue("error", path, number, f"{message}: {text.strip()[:MAX_LINE_SHOWN]}"))
+    return issues
+
+
+# ---------------------------------------------------------------- generated dialogue
+
+# Written by the roblox-narrative skill's story.py build (and roblox-forge's build_dialogue). Line 2 is the
+# marker; line 3 names the docs folder and the hash of the docs it was built from.
+DIALOGUE_MARKER = "-- Generated from Markdown by roblox-narrative (story.py build)."
+DOCS_LINE_RE = re.compile(r"^-- Docs: (?P<docs>.+) \(sha256 (?P<hash>[0-9a-f]{64})\)$")
+SCAN_SKIP = {".git", "node_modules", "Packages", "ServerPackages", "DevPackages"}
+MAX_SCANNED = 3000
+
+
+def dialogue_header(path: Path) -> Optional[tuple]:
+    """(docs folder, recorded hash) when path is a generated dialogue module, else None."""
+    head = _read(path, 600).split("\n")
+    if len(head) < 3 or not head[1].startswith(DIALOGUE_MARKER):
+        return None
+    m = DOCS_LINE_RE.match(head[2])
+    return (Path(os.path.normpath(path.parent / m.group("docs"))), m.group("hash")) if m else None
+
+
+def docs_hash(docs: Path) -> Optional[str]:
+    """The same hash as story.py's docs_hash, or None when the docs are gone."""
+    if not (docs / "characters.md").is_file():
+        return None
+    files = [docs / "characters.md"] + ([docs / "story.md"] if (docs / "story.md").is_file() else [])
+    h = hashlib.sha256()
+    for path in files + sorted((docs / "dialogue").glob("*.md")):
+        try:
+            h.update(path.relative_to(docs).as_posix().encode() + b"\0" + path.read_bytes() + b"\0")
+        except OSError:
+            return None
+    return h.hexdigest()
+
+
+def stale_dialogue(cwd: Path, changed: list[Path]) -> list[Issue]:
+    """Generated dialogue modules whose docs changed since the build, when either side changed this session."""
+    if not changed:
+        return []
+    changed_set = {p.resolve() for p in changed}
+    issues, scanned = [], 0
+    for project in detect_all(cwd):
+        if project.engine != "roblox":
+            continue
+        for directory, dirs, names in os.walk(project.root):
+            dirs[:] = [d for d in dirs if d not in SCAN_SKIP]
+            for name in names:
+                if not name.endswith((".luau", ".lua")):
+                    continue
+                scanned += 1
+                if scanned > MAX_SCANNED:
+                    return issues
+                path = Path(directory) / name
+                header = dialogue_header(path)
+                if not header:
+                    continue
+                docs, recorded = header
+                docs_resolved = docs.resolve()
+                involved = path.resolve() in changed_set or any(
+                    docs_resolved in p.parents for p in changed_set)
+                if involved and docs_hash(docs) != recorded:
+                    try:
+                        rel = str(path.relative_to(cwd))
+                    except ValueError:
+                        rel = str(path)
+                    issues.append(Issue("error", rel, 1, f"built from {docs} but the docs changed since: run "
+                                                         "build_dialogue (roblox-forge) or story.py build again"))
     return issues
 
 
@@ -782,6 +861,9 @@ def patch_review(patch: str, cwd: Path) -> tuple[str, list[str]]:
             reason = generated_reason(project, path)
             if reason:
                 return f"{p} is generated ({reason}). Edit the source instead.", []
+        if op == "Update" and path.suffix in (".luau", ".lua") and path.is_file() and dialogue_header(path):
+            return (f"{p} is built from the Markdown docs in {dialogue_header(path)[0]}. Change the docs and run "
+                    "build_dialogue (roblox-forge) or story.py build again."), []
         if not project or project.engine != "unity":
             continue
         meta = Path(str(path) + ".meta")
@@ -822,7 +904,8 @@ def on_user_prompt_submit(event: dict) -> Optional[dict]:
     if not isinstance(prompt, str) or not CREATIVE_VERB_RE.search(prompt):
         return None
     game, level, polish = GAME_REQUEST_RE.search(prompt), LEVEL_RE.search(prompt), POLISH_RE.search(prompt)
-    if not game and not level and not polish:
+    narrative = STORY_RE.search(prompt)
+    if not game and not level and not polish and not narrative:
         return None
     projects = detect_all(Path(event.get("cwd") or os.getcwd()))
     roblox = bool(ROBLOX_RE.search(prompt)) or any(p.engine == "roblox" for p in projects)
@@ -833,6 +916,8 @@ def on_user_prompt_submit(event: dict) -> Optional[dict]:
             briefs.append(ROBLOX_BRIEF)
     if polish and roblox:
         briefs.append(POLISH_BRIEF)
+    if narrative and roblox:
+        briefs.append(STORY_BRIEF)
     if not briefs:
         return None
     return {"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": "\n".join(briefs)}}
@@ -918,7 +1003,9 @@ def on_stop(event: dict) -> Optional[dict]:
     if event.get("stop_hook_active"):
         return None  # already asked once this turn; never loop
     cwd = Path(event.get("cwd") or os.getcwd())
-    errors = [i for f in changed_files(cwd) for i in check_file(f, cwd) if i.level == "error"]
+    changed = changed_files(cwd)
+    errors = [i for f in changed for i in check_file(f, cwd) if i.level == "error"]
+    errors += stale_dialogue(cwd, changed)
     unfinished = unfinished_issues(cwd)
     parts = []
     if errors:

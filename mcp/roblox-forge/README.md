@@ -11,6 +11,10 @@ Offline tools for building Roblox games with Rojo. It complements Roblox Studio'
 | `audit_feel` | Finds player actions (button presses, input bindings, ProximityPrompts, touches, server results) whose handlers give no feedback: no sound, tween, particles, animation, camera, or UI change. Follows functions in the same file; handlers that call required modules are listed as unverified (heuristic) | no |
 | `audit_polish` | Checks effect, sound, and UI code against a catalog of Roblox Studio's API: members that don't exist on the created class, a `Color3` or number given to a sequence property (`ParticleEmitter.Color`, `Lifetime`, ...), deprecated members, values outside Studio's editor ranges, `rbxasset://` paths that aren't built in, emitters left at their default look, sounds with no `SoundId`, scaled text with no size limit, and dated fonts (heuristic) | no |
 | `vfx_recipe` | Returns Luau for a ready-made effect (`hit_spark`, `pickup_glow`, `level_up`, `smoke_puff`, `dash_trail`, `magic_beam`) in a chosen color. Every property, value type, and range is checked against the catalog, and textures are built-in files, so it needs no upload | no |
+| `review_story` | Checks a folder of Markdown story docs (`characters.md`, `story.md`, `dialogue/*.md`, in the `roblox-narrative` skill's format): lines it can't parse, speakers with no character sheet, choices that point nowhere, unreachable and dead-end nodes, flags nothing sets, nodes where every choice has a condition, lines too long for phones, missing voice direction, and unfinished text | no |
+| `build_dialogue` | Builds the typed dialogue module that `DialogueRunner.luau` plays, and copies the runner next to it if it isn't there. Refuses while `review_story` has high findings; never overwrites a file it didn't write | yes, the output file |
+| `export_voiceover` | Writes the voiceover recording script: lines grouped by character with IDs, delivery notes, word counts, and estimated seconds | yes, the output file |
+| `export_localization` | Writes a LocalizationTable CSV (`Key,Context,Example,Source`, then one column per locale), keyed by the same line IDs | yes, the output file |
 | `check_odds` | Checks paid random item odds against Roblox policy (all outcomes, percentages summing to 100%, rounding disclaimer) | no |
 | `datastore_budget` | Estimates a server's DataStore requests per minute against the documented default budget | no |
 | `luau_check` | Runs `luau-analyze` (strict by default) on files or folders | no |
@@ -66,5 +70,6 @@ Value types for sequence properties aren't in Studio's files, so `VALUE_TYPES` i
 
 ## Development
 - Tool logic lives in `forge.py` (standard library only); `server.py` only registers tools; `studio_catalog.py` builds `catalog.json`.
+- The story tools in `narrative.py` call the `roblox-narrative` skill's `scripts/story.py`, so the skill works without this server, and add creative-director's unfinished-text checks.
 - Tests: `python3 -m unittest tools/test_roblox_forge.py` (logic) and
   `uv run --python 3.12 --with mcp==2.3.0 python tools/mcp_smoke.py` (real stdio session).

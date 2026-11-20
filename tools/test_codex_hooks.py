@@ -19,6 +19,17 @@ sys.path.insert(0, str(HOOKS))
 import discover  # noqa: E402
 import install as install_module  # noqa: E402
 
+STORY_EXAMPLE = HOOKS.parents[2] / "skills" / "roblox-narrative" / "assets" / "example" / "docs"
+
+
+def load_story():
+    """The roblox-narrative skill's story.py, which writes the dialogue modules the hooks guard."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("story", STORY_EXAMPLE.parents[2] / "scripts" / "story.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
 
 class install:  # noqa: N801  run the installer quietly
     @staticmethod
@@ -403,6 +414,16 @@ class CreativeBrief(HookCase):
         self.assertIn("Roblox polish", both)
         self.assertIsNone(self.prompt("why does the UI flicker?"))  # no creative verb
 
+    def test_roblox_story_guidance(self):
+        self.assertIsNone(self.prompt("write dialogue for the shopkeeper"))  # no Roblox context
+        out = self.context(self.prompt("write NPC dialogue for my Roblox hotel"))
+        self.assertIn("Roblox story", out)
+        make_roblox(self.root)
+        self.assertIn("build_dialogue", self.context(self.prompt("add a voiceover script for the intro cutscene")))
+        self.assertIn("review_story", self.context(self.prompt("create character bios for the cast")))
+        self.assertIsNone(self.prompt("make the character jump higher"))  # the avatar, not a story
+        self.assertIsNone(self.prompt("write a script for the sliding door"))
+
     def test_level_words_count_only_in_a_game_project(self):
         self.assertIsNone(self.prompt("add a new level with moving platforms"))
         make_godot(self.root)
@@ -450,6 +471,39 @@ class UnfinishedWork(HookCase):
         write(self.root, "tests/test_text.py", 'SAMPLE = "lor' + 'em ipsum"\n')
         write(self.root, "src/game.py", "# TO" + "DO: tune the jump arc after playtesting\nraise NotImplementedError\n")
         self.assertIsNone(self.stop())
+
+    def build_example(self) -> Path:
+        story = load_story()
+        docs = self.root / "docs" / "story"
+        shutil.copytree(STORY_EXAMPLE, docs)
+        make_roblox(self.root)
+        out = self.root / "src" / "shared" / "Dialogue.luau"
+        self.assertTrue(story.build(docs, out)["ok"])
+        return docs
+
+    def test_generated_dialogue_is_rebuilt_not_edited(self):
+        docs = self.build_example()
+        self.assertDenied(self.patch("*** Update File: src/shared/Dialogue.luau\n@@\n-a\n+b"), "story.py build")
+        self.assertIsNone(self.patch("*** Update File: docs/story/characters.md\n@@\n-a\n+b"))
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-qm", "init")
+        self.assertIsNone(self.stop(), "built and unchanged")
+        pip = docs / "dialogue" / "pier_kid.md"
+        pip.write_text(pip.read_text().replace("See you, Pip.", "Later, Pip."))
+        out = self.stop()
+        self.assertIn("src/shared/Dialogue.luau:1: error: built from", out["reason"])
+        self.assertTrue(load_story().build(docs, self.root / "src" / "shared" / "Dialogue.luau")["ok"])
+        self.assertIsNone(self.stop(), "rebuilt")
+
+    def test_docs_hash_matches_story_py(self):
+        sys.path.insert(0, str(HOOKS))
+        try:
+            import game_hooks
+        finally:
+            sys.path.pop(0)
+        self.assertEqual(game_hooks.docs_hash(STORY_EXAMPLE), load_story().docs_hash(STORY_EXAMPLE))
+        self.assertEqual(game_hooks.DIALOGUE_MARKER, load_story().MARKER.split(" Don't")[0])
+        self.assertIsNone(game_hooks.docs_hash(self.root))
 
     def test_value_types_match_roblox_forge(self):
         sys.path.insert(0, str(HOOKS.parents[2] / "mcp" / "roblox-forge"))

@@ -5,6 +5,8 @@ local RemoteGuard = require("../../skills/roblox-scripting/assets/rojo-template/
 local PlayerData = require("../../skills/roblox-scripting/assets/rojo-template/src/server/PlayerData")
 local RoundSystem = require("../../skills/roblox-gameplay/assets/RoundSystem")
 local Juice = require("../../skills/roblox-scripting/assets/rojo-template/src/shared/Juice")
+local DialogueRunner = require("../../skills/roblox-narrative/assets/DialogueRunner")
+local ExampleDialogue = require("../../skills/roblox-narrative/assets/example/build/Dialogue")
 
 local passed, failed = 0, 0
 local function test(name: string, fn: () -> ())
@@ -349,6 +351,85 @@ test("sound gate blocks stacking per key and jitters pitch", function()
 	eq(gate.pitch("jump"), 1.1, "other keys are separate")
 	clock = 0.1
 	eq(gate.pitch("coin"), 1, "allowed again after minGap")
+end)
+
+-- DialogueRunner (with the generated example dialogue) ---------------------
+
+local function flagStore(initial: { [string]: boolean }?)
+	local values: { [string]: boolean } = initial or {}
+	return values, {
+		has = function(flag: string): boolean
+			return values[flag] == true
+		end,
+		set = function(flag: string, value: boolean)
+			values[flag] = if value then true else nil
+		end,
+	}
+end
+
+local function texts(step: any): string
+	local out = {}
+	for _, choice in step.choices do
+		table.insert(out, choice.text or "(continue)")
+	end
+	return table.concat(out, " / ")
+end
+
+test("first talk: only the choices whose flags hold, and asking sets a flag", function()
+	local values, flags = flagStore()
+	local runner = DialogueRunner.new(ExampleDialogue, "harbor_shop", flags)
+	local step = runner.current()
+	assert(step)
+	eq(step.lines[1].id, "harbor_shop.greet.1")
+	eq(step.lines[1].speaker, "mara")
+	eq(texts(step), "I'll help. What do you need? / Just looking around.")
+	eq(runner.choose(1), true)
+	step = runner.current()
+	assert(step)
+	eq(#step.lines, 2)
+	eq(texts(step), "(continue)")
+	eq(runner.choose(1), true)
+	eq(values.asked_about_oil, true)
+	eq(runner.finished(), true)
+	eq(runner.current(), nil)
+	eq(runner.choose(1), false, "nothing to choose after the end")
+end)
+
+test("conditions follow game flags through the whole quest", function()
+	local values, flags = flagStore({ asked_about_oil = true })
+	local pip = DialogueRunner.new(ExampleDialogue, "pier_kid", flags)
+	eq(texts(pip.current()), "Mara needs lamp oil. / See you, Pip.")
+	values.oil_found = true -- game code: the player picked up the can
+	eq(texts(pip.current()), "Got the oil already. / See you, Pip.")
+
+	local mara = DialogueRunner.new(ExampleDialogue, "harbor_shop", flags)
+	eq(texts(mara.current()), "I'll help. What do you need? / Here's your oil. / Just looking around.")
+	eq(mara.choose(2), true)
+	eq(values.oil_delivered, true)
+	local step = mara.current()
+	assert(step)
+	eq(step.lines[2].text, "Up the stairs, pour it in, strike the lever. Don't touch the lens.")
+
+	local again = DialogueRunner.new(ExampleDialogue, "harbor_shop", flags)
+	eq(texts(again.current()), "Where do I pour it again? / Just looking around.")
+	values.lamp_lit = true -- game code: the player pulled the lever
+	eq(texts(again.current()), "The light's on. Can I go up? / Just looking around.")
+end)
+
+test("forged and stale choices change nothing", function()
+	local values, flags = flagStore()
+	local runner = DialogueRunner.new(ExampleDialogue, "harbor_shop", flags)
+	eq(runner.choose(2.5), false, "not an integer")
+	eq(runner.choose(0), false)
+	eq(runner.choose(3), false, "only two choices are visible")
+	eq(runner.choose((0 / 0) :: number), false, "NaN")
+	eq(runner.choose(("1" :: any) :: number), false, "not a number")
+	eq(values.oil_delivered, nil)
+	eq(runner.finished(), false)
+	eq(runner.choose(2), true, "the last visible choice ends it")
+	eq(runner.finished(), true)
+	local ok = pcall(DialogueRunner.new, ExampleDialogue, "missing", flags)
+	eq(ok, false, "unknown conversation")
 end)
 
 print(`{passed} passed, {failed} failed`)

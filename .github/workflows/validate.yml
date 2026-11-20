@@ -45,6 +45,8 @@ jobs:
           skills/roblox-scripting/assets/rojo-template/src/shared/Config.luau
           skills/roblox-scripting/assets/rojo-template/src/shared/Juice.luau
           skills/roblox-gameplay/assets/RoundSystem.luau
+          skills/roblox-narrative/assets/DialogueRunner.luau
+          skills/roblox-narrative/assets/example/build/Dialogue.luau
       - name: Test Luau modules
         run: luau tools/luau/test_roblox_modules.luau
       - name: Smoke-test the roblox-forge MCP server over stdio

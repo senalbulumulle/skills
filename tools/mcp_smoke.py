@@ -15,7 +15,9 @@ from mcp.client.stdio import stdio_client
 MCP = Path(__file__).resolve().parent.parent / "mcp"
 SERVER = MCP / "roblox-forge" / "server.py"
 EXPECTED = {"create_project", "check_project", "map_remotes", "audit_remotes", "audit_feel", "audit_polish",
-            "vfx_recipe", "check_odds", "datastore_budget", "luau_check"}
+            "vfx_recipe", "review_story", "build_dialogue", "export_voiceover", "export_localization", "check_odds",
+            "datastore_budget", "luau_check"}
+EXAMPLE_DOCS = MCP.parent / "skills" / "roblox-narrative" / "assets" / "example" / "docs"
 DIRECTOR = MCP / "creative-director" / "server.py"
 DIRECTOR_TOOLS = {"concept_seeds", "review_design", "find_slop"}
 
@@ -57,6 +59,19 @@ async def roblox_forge():
                 assert feel["ok"] and feel["with_feedback"] == 1, feel
                 polish = payload(await session.call_tool("audit_polish", {"path": game}))
                 assert polish["ok"] and not polish["findings"], polish
+                docs = str(EXAMPLE_DOCS)
+                story = payload(await session.call_tool("review_story", {"path": docs}))
+                assert story["ok"] and story["lines"] == 9, story
+                built = payload(await session.call_tool("build_dialogue", {
+                    "path": docs, "out": str(Path(game) / "src" / "shared" / "Dialogue.luau")}))
+                assert built["ok"] and built["runner"].startswith("wrote"), built
+                vo = payload(await session.call_tool("export_voiceover", {"path": docs, "out": str(Path(tmp) / "vo.md")}))
+                assert vo["ok"], vo
+                loc = payload(await session.call_tool("export_localization", {
+                    "path": docs, "out": str(Path(tmp) / "loc.csv"), "locales": ["es"]}))
+                assert loc["ok"] and loc["rows"] == 19, loc
+                built_check = payload(await session.call_tool("check_project", {"path": game}))
+                assert built_check["ok"], built_check
 
             odds = payload(await session.call_tool("check_odds", {"outcomes": [
                 {"name": "Common", "percent": 90}, {"name": "Rare", "percent": 10}]}))

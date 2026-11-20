@@ -6,6 +6,7 @@
 | `agents/game-designer.toml` | `$CODEX_HOME/agents/` | A sub-agent that writes a buildable design with the sections `review_design` checks |
 | `agents/game-critic.toml` | `$CODEX_HOME/agents/` | A sub-agent that playtests or reads the build and ranks what is broken, confusing, dull, or generic |
 | `agents/roblox-polisher.toml` | `$CODEX_HOME/agents/` | A sub-agent that adds and fixes effects, sounds, and UI feedback in a Roblox project with roblox-forge's `audit_polish` and `vfx_recipe`, using only real assets |
+| `agents/narrative-designer.toml` | `$CODEX_HOME/agents/` | A sub-agent that writes characters, a story outline, and NPC dialogue as Markdown, checks them with `review_story`, and builds the dialogue module, voiceover script, and localization CSV |
 
 The profile also sets the model: the first of `gpt-6.2-astra` and `gpt-6-astra` that the installed Codex lists, at `high` reasoning effort. Pick another with `--model`.
 
@@ -24,4 +25,4 @@ The installer writes and removes only files that start with its marker line, so 
 
 - `codex -p NAME` layers `$CODEX_HOME/NAME.config.toml` on top of `config.toml`, and its `developer_instructions` becomes the first developer message.
 - Role files in `$CODEX_HOME/agents/` are loaded automatically. Each needs `name` and `developer_instructions`, and its `description` is what the spawn tool lists.
-- A captured request with the profile showed model `gpt-6-astra`, effort `high`, the profile instructions, every role (roblox-polisher included), and the game hooks' creative brief.
+- A captured request with the profile showed model `gpt-6-astra`, effort `high`, the profile instructions, every role (roblox-polisher and narrative-designer included), and the game hooks' creative brief.

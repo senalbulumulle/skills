@@ -22,6 +22,8 @@ def _load(name: str):
 
 forge = _load("forge")
 studio_catalog = _load("studio_catalog")
+narrative = _load("narrative")
+EXAMPLE_DOCS = FORGE_DIR.parents[1] / "skills" / "roblox-narrative" / "assets" / "example" / "docs"
 
 
 class ForgeTestCase(unittest.TestCase):
@@ -433,6 +435,38 @@ class VfxRecipeTests(ForgeTestCase):
         bad = forge.vfx_recipe("fireworks")
         self.assertFalse(bad["ok"])
         self.assertIn("magic_beam", bad["effects"])
+
+
+class NarrativeTests(ForgeTestCase):
+    def test_example_builds_with_runner(self):
+        self.assertTrue(narrative.review_story(str(EXAMPLE_DOCS))["ok"])
+        out = self.root / "src" / "shared" / "Dialogue.luau"
+        built = narrative.build_dialogue(str(EXAMPLE_DOCS), str(out))
+        self.assertTrue(built["ok"], built)
+        runner = out.parent / "DialogueRunner.luau"
+        self.assertEqual(runner.read_text(), narrative.RUNNER.read_text())
+        runner.write_text("-- my changes\n")
+        self.assertEqual(narrative.build_dialogue(str(EXAMPLE_DOCS), str(out))["runner"],
+                         "kept the existing DialogueRunner.luau")
+        self.assertEqual(runner.read_text(), "-- my changes\n")
+        self.assertTrue(narrative.export_voiceover(str(EXAMPLE_DOCS), str(self.root / "vo.md"))["ok"])
+        loc = narrative.export_localization(str(EXAMPLE_DOCS), str(self.root / "loc.csv"), ["es"])
+        self.assertEqual(loc["rows"], 19)
+
+    def test_unfinished_text_blocks_builds(self):
+        docs = self.root / "docs"
+        shutil.copytree(EXAMPLE_DOCS, docs)
+        pip = docs / "dialogue" / "pier_kid.md"
+        pip.write_text(pip.read_text().replace("See you, Pip.", "Lor" + "em ipsum dolor"))
+        review = narrative.review_story(str(docs))
+        self.assertFalse(review["ok"])
+        self.assertEqual([(f["severity"], f["where"]) for f in review["findings"]],
+                         [("high", "dialogue/pier_kid.md:11")])
+        for result in (narrative.build_dialogue(str(docs), str(self.root / "D.luau")),
+                       narrative.export_voiceover(str(docs), str(self.root / "vo.md")),
+                       narrative.export_localization(str(docs), str(self.root / "loc.csv"))):
+            self.assertFalse(result["ok"])
+        self.assertEqual(list(self.root.glob("*.luau")) + list(self.root.glob("vo.md")), [])
 
 
 @unittest.skipUnless(shutil.which("luau-analyze"), "luau-analyze not installed")

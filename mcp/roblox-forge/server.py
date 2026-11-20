@@ -8,7 +8,8 @@
 It complements Roblox Studio's built-in MCP server (live editing, play testing, console output)
 with checks that work on the project files: scaffolding, Rojo project validation, remote security
 audit, a map of every remote, a game-feel audit, a polish audit and effect recipes checked against a
-catalog of Roblox Studio's API, paid-random-item odds, DataStore budget, and Luau type checking.
+catalog of Roblox Studio's API, story-doc review with dialogue, voiceover, and localization builds,
+paid-random-item odds, DataStore budget, and Luau type checking.
 
 Run: uv run --script server.py   (stdio transport; register it with Claude Code or Codex, see README.md)
 """
@@ -18,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import forge  # noqa: E402
+import narrative  # noqa: E402
 from mcp.server.mcpserver import MCPServer  # noqa: E402
 from mcp.types import ToolAnnotations  # noqa: E402
 
@@ -28,7 +30,8 @@ server = MCPServer(
         "Offline tools for Rojo-based Roblox projects. Pass absolute paths. Use check_project after "
         "changing the project layout, map_remotes and audit_remotes after adding or renaming remotes, "
         "audit_feel and audit_polish after changing gameplay, effects, sounds, or UI, vfx_recipe for particle, "
-        "trail, and beam effects, check_odds for any paid random item, datastore_budget "
+        "trail, and beam effects, review_story after editing story docs and then build_dialogue (never edit its "
+        "output by hand), check_odds for any paid random item, datastore_budget "
         "when changing save frequency, and luau_check on pure modules. For live "
         "Studio actions (play, console output, running code), use Roblox Studio's own MCP server."
     ),
@@ -92,6 +95,38 @@ def vfx_recipe(effect: str, color: str | None = None) -> dict:
     magic_beam. Uses only members, value types, ranges, and built-in textures from the Roblox Studio catalog.
     `color` is a hex color such as "#ff8800" (each effect has a default)."""
     return forge.vfx_recipe(effect, color)
+
+
+@server.tool(annotations=READ_ONLY)
+def review_story(path: str) -> dict:
+    """Check a folder of Markdown story docs (characters.md, story.md, dialogue/*.md; format in the
+    roblox-narrative skill): parse errors, speakers without character sheets, choices pointing nowhere,
+    unreachable or dead-end nodes, flags nothing sets, choices that can strand the player, lines too long for
+    phones, missing voice direction, and unfinished text."""
+    return narrative.review_story(path)
+
+
+@server.tool(annotations=WRITES)
+def build_dialogue(path: str, out: str) -> dict:
+    """Build the dialogue data module (`out`, a .luau file) from the story docs at `path`, and copy
+    DialogueRunner.luau next to it if it isn't there. Refuses while review_story has high findings, and never
+    overwrites a file it didn't write. Rebuild after every docs change instead of editing the output."""
+    return narrative.build_dialogue(path, out)
+
+
+@server.tool(annotations=WRITES)
+def export_voiceover(path: str, out: str) -> dict:
+    """Write the voiceover recording script (`out`, a .md file): every spoken line grouped by character, with
+    its ID, delivery note, word count, and estimated length, plus each character's voice direction."""
+    return narrative.export_voiceover(path, out)
+
+
+@server.tool(annotations=WRITES)
+def export_localization(path: str, out: str, locales: list[str] | None = None) -> dict:
+    """Write a LocalizationTable CSV (`out`) with Roblox's columns (Key, Context, Example, Source, then each
+    locale in `locales`, such as ["es", "pt-br"]): one row per spoken line, choice, and character name, keyed
+    by the IDs the dialogue module uses."""
+    return narrative.export_localization(path, out, locales)
 
 
 @server.tool(annotations=READ_ONLY)
