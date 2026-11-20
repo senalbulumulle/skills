@@ -4,7 +4,23 @@ Creative skills for game development and software development. Each skill works 
 
 ## Installation
 
-You need [uv](https://docs.astral.sh/uv/). Install it if you don't have it yet:
+### Dependencies
+
+Required:
+
+- [Git](https://git-scm.com/), to clone the repository.
+- [uv](https://docs.astral.sh/uv/), to run `tools/skills.py` and the MCP servers. It downloads the Python version and packages they need.
+
+Optional, only for the features that use them:
+
+- [Python](https://www.python.org/) 3.9 or newer: the scripts in some skills, and the Codex hooks and profile installers.
+- [Node.js](https://nodejs.org/): the browser playtest (`game-playtest`) and the HTML script check (`game-prototype`).
+- [Codex CLI](https://developers.openai.com/codex/cli): `scripts/codex/install-codex.sh` registers the MCP servers with it.
+- [Rojo](https://rojo.space) and [Luau](https://github.com/luau-lang/luau/releases): build and type checks in the `roblox-forge` MCP server.
+
+### Install
+
+Install uv if you don't have it yet:
 
 ```sh
 curl -LsSf https://astral.sh/uv/install.sh | sh
