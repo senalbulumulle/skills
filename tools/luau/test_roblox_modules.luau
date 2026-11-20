@@ -4,6 +4,7 @@
 local RemoteGuard = require("../../skills/roblox-scripting/assets/rojo-template/src/server/RemoteGuard")
 local PlayerData = require("../../skills/roblox-scripting/assets/rojo-template/src/server/PlayerData")
 local RoundSystem = require("../../skills/roblox-gameplay/assets/RoundSystem")
+local Juice = require("../../skills/roblox-scripting/assets/rojo-template/src/shared/Juice")
 
 local passed, failed = 0, 0
 local function test(name: string, fn: () -> ())
@@ -280,6 +281,74 @@ test("round ends early and intermission resets if players leave", function()
 	players = 1
 	rounds.update(0.1)
 	eq(rounds.phase(), "waiting", "back to waiting when below minPlayers")
+end)
+
+-- Juice ---------------------------------------------------------------------
+
+test("tween presets name real easing styles and directions", function()
+	local styles = { Linear = true, Sine = true, Back = true, Quad = true, Quart = true, Quint = true, Bounce = true,
+		Elastic = true, Exponential = true, Circular = true, Cubic = true }
+	local directions = { In = true, Out = true, InOut = true }
+	for name, p in Juice.tweens do
+		eq(styles[p.style], true, `{name} style`)
+		eq(directions[p.direction], true, `{name} direction`)
+		eq(p.time > 0 and p.time <= 0.3, true, `{name} time`)
+	end
+end)
+
+test("countUp rolls from start to end, fast then settling", function()
+	eq(Juice.countUp(0, 100, 0), 0)
+	eq(Juice.countUp(0, 100, 1), 100)
+	eq(Juice.countUp(0, 100, 2), 100, "alpha past 1 clamps")
+	eq(Juice.countUp(0, 100, 0.5) > 50, true, "ahead of linear at the midpoint")
+	eq(Juice.countUp(50, 10, 1), 10, "counts down too")
+end)
+
+test("shake grows with trauma, stays in bounds, and decays to rest", function()
+	local shake = Juice.newShake({ maxOffset = 1, maxRoll = 3, decay = 1, seed = 4 })
+	local x, y, roll = shake.step(1 / 60)
+	eq(x == 0 and y == 0 and roll == 0, true, "still without trauma")
+	shake.add(0.7)
+	shake.add(0.7)
+	eq(shake.trauma(), 1, "trauma caps at 1")
+	local moved = false
+	for _ = 1, 30 do
+		x, y, roll = shake.step(1 / 60)
+		local power = shake.trauma() ^ 2
+		eq(math.abs(x) <= power + 1e-9 and math.abs(y) <= power + 1e-9 and math.abs(roll) <= 3 * power + 1e-9, true,
+			"offsets within trauma squared")
+		moved = moved or x ~= 0 or y ~= 0
+	end
+	eq(moved, true, "shakes while traumatized")
+	for _ = 1, 120 do
+		shake.step(1 / 60)
+	end
+	eq(shake.trauma(), 0, "decays to zero")
+	x, y, roll = shake.step(1 / 60)
+	eq(x == 0 and y == 0 and roll == 0, true, "at rest after decay")
+end)
+
+test("sound gate blocks stacking per key and jitters pitch", function()
+	local clock = 0
+	local rolls = { 0, 1, 0.5 }
+	local i = 0
+	local gate = Juice.newSoundGate({
+		minGap = 0.1,
+		jitter = 0.1,
+		now = function(): number
+			return clock
+		end,
+		random = function(): number
+			i += 1
+			return rolls[i]
+		end,
+	})
+	eq(gate.pitch("coin"), 0.9, "lowest pitch")
+	clock = 0.05
+	eq(gate.pitch("coin"), nil, "too soon")
+	eq(gate.pitch("jump"), 1.1, "other keys are separate")
+	clock = 0.1
+	eq(gate.pitch("coin"), 1, "allowed again after minGap")
 end)
 
 print(`{passed} passed, {failed} failed`)

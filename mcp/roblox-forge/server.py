@@ -7,8 +7,8 @@
 
 It complements Roblox Studio's built-in MCP server (live editing, play testing, console output)
 with checks that work on the project files: scaffolding, Rojo project validation, remote security
-audit, a map of every remote, a game-feel audit, paid-random-item odds, DataStore budget, and Luau
-type checking.
+audit, a map of every remote, a game-feel audit, a polish audit and effect recipes checked against a
+catalog of Roblox Studio's API, paid-random-item odds, DataStore budget, and Luau type checking.
 
 Run: uv run --script server.py   (stdio transport; register it with Claude Code or Codex, see README.md)
 """
@@ -27,7 +27,8 @@ server = MCPServer(
     instructions=(
         "Offline tools for Rojo-based Roblox projects. Pass absolute paths. Use check_project after "
         "changing the project layout, map_remotes and audit_remotes after adding or renaming remotes, "
-        "audit_feel after changing gameplay or UI, check_odds for any paid random item, datastore_budget "
+        "audit_feel and audit_polish after changing gameplay, effects, sounds, or UI, vfx_recipe for particle, "
+        "trail, and beam effects, check_odds for any paid random item, datastore_budget "
         "when changing save frequency, and luau_check on pure modules. For live "
         "Studio actions (play, console output, running code), use Roblox Studio's own MCP server."
     ),
@@ -74,6 +75,23 @@ def audit_feel(path: str) -> dict:
     whose handlers give no feedback: no sound, tween, particles, animation, camera, or UI change. Follows
     functions in the same file; handlers that call required modules are listed as unverified. Heuristic."""
     return forge.audit_feel(path)
+
+
+@server.tool(annotations=READ_ONLY)
+def audit_polish(path: str) -> dict:
+    """Check effect, sound, and UI code against a catalog of Roblox Studio's API: members that don't exist on
+    the created class, Color3 or numbers given to sequence properties, deprecated members, values outside
+    Studio's editor ranges, missing built-in files, emitters left at default look, sounds with no SoundId,
+    scaled text with no size limit, and dated fonts. Heuristic."""
+    return forge.audit_polish(path)
+
+
+@server.tool(annotations=READ_ONLY)
+def vfx_recipe(effect: str, color: str | None = None) -> dict:
+    """Luau code for a ready-made effect: hit_spark, pickup_glow, level_up, smoke_puff, dash_trail, or
+    magic_beam. Uses only members, value types, ranges, and built-in textures from the Roblox Studio catalog.
+    `color` is a hex color such as "#ff8800" (each effect has a default)."""
+    return forge.vfx_recipe(effect, color)
 
 
 @server.tool(annotations=READ_ONLY)

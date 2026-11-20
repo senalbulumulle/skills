@@ -14,8 +14,8 @@ from mcp.client.stdio import stdio_client
 
 MCP = Path(__file__).resolve().parent.parent / "mcp"
 SERVER = MCP / "roblox-forge" / "server.py"
-EXPECTED = {"create_project", "check_project", "map_remotes", "audit_remotes", "audit_feel", "check_odds",
-            "datastore_budget", "luau_check"}
+EXPECTED = {"create_project", "check_project", "map_remotes", "audit_remotes", "audit_feel", "audit_polish",
+            "vfx_recipe", "check_odds", "datastore_budget", "luau_check"}
 DIRECTOR = MCP / "creative-director" / "server.py"
 DIRECTOR_TOOLS = {"concept_seeds", "review_design", "find_slop"}
 
@@ -55,10 +55,14 @@ async def roblox_forge():
                 assert mapped["ok"] and [r["name"] for r in mapped["remotes"]] == ["ClaimDaily"], mapped
                 feel = payload(await session.call_tool("audit_feel", {"path": game}))
                 assert feel["ok"] and feel["with_feedback"] == 1, feel
+                polish = payload(await session.call_tool("audit_polish", {"path": game}))
+                assert polish["ok"] and not polish["findings"], polish
 
             odds = payload(await session.call_tool("check_odds", {"outcomes": [
                 {"name": "Common", "percent": 90}, {"name": "Rare", "percent": 10}]}))
             assert odds["ok"], odds
+            recipe = payload(await session.call_tool("vfx_recipe", {"effect": "hit_spark", "color": "#ff8800"}))
+            assert recipe["ok"] and "ColorSequence.new" in recipe["code"], recipe
             budget = payload(await session.call_tool("datastore_budget", {"players": 20}))
             assert budget["budget_per_minute"] == 860, budget
             print(f"roblox-forge smoke test passed: {len(tools)} tools; rojo_build={checked['rojo_build']}")

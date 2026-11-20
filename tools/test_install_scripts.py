@@ -105,7 +105,7 @@ class InstallScripts(unittest.TestCase):
         profile = (self.codex_home / "game.config.toml").read_text()
         self.assertIn('model = "gpt-6-astra"', profile)
         self.assertEqual(sorted(p.name for p in (self.codex_home / "agents").iterdir()),
-                         ["game-critic.toml", "game-designer.toml", "my-role.toml"])
+                         ["game-critic.toml", "game-designer.toml", "my-role.toml", "roblox-polisher.toml"])
         self.assertEqual(self.mcp()["creative-director"]["args"], ["run", "--quiet", "--script", SERVER])
         self.assertEqual(self.mcp()["roblox-forge"]["args"], ["run", "--quiet", "--script", FORGE])
 

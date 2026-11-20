@@ -43,6 +43,7 @@ jobs:
           skills/roblox-scripting/assets/rojo-template/src/server/RemoteGuard.luau
           skills/roblox-scripting/assets/rojo-template/src/server/PlayerData.luau
           skills/roblox-scripting/assets/rojo-template/src/shared/Config.luau
+          skills/roblox-scripting/assets/rojo-template/src/shared/Juice.luau
           skills/roblox-gameplay/assets/RoundSystem.luau
       - name: Test Luau modules
         run: luau tools/luau/test_roblox_modules.luau

@@ -198,7 +198,7 @@ ENGINES = {
             "The server owns every outcome: validate and rate-limit every RemoteEvent/RemoteFunction argument.",
             'Use task.wait/task.spawn/task.delay and game:GetService("Name"), never wait()/spawn()/delay() or game.Name.',
             "Save data with UpdateAsync under a session lock; kick on load failure instead of playing on defaults.",
-            "If the roblox-forge MCP server is connected, run check_project after layout changes, map_remotes and audit_remotes after remote changes, and audit_feel after gameplay or UI changes.",
+            "If the roblox-forge MCP server is connected, run check_project after layout changes, map_remotes and audit_remotes after remote changes, and audit_feel and audit_polish after gameplay, effect, sound, or UI changes.",
             "Never publish (rojo upload, mantle deploy, rbxcloud): the user does that.",
         ],
     },
@@ -424,6 +424,82 @@ def check_roblox(project: Project, path: Path, text: str, rel: str) -> list[Issu
             issues.append(Issue("warning", rel, _line(code, m.start()), f"{m.group(1)}() is deprecated: use task.{m.group(1)}()"))
     for m in re.finditer(rf"\bgame\.({ROBLOX_SERVICES})\b", code):
         issues.append(Issue("warning", rel, _line(code, m.start()), f'use game:GetService("{m.group(1)}")'))
+    return issues + _value_type_issues(text, code, rel)
+
+
+# Properties whose value type is a sequence, range, or vector: assigning a Color3 or a plain number errors at
+# run time. The same table as VALUE_TYPES in mcp/roblox-forge/forge.py (tools/test_codex_hooks.py keeps them
+# identical).
+VALUE_TYPES = {
+    "ParticleEmitter": {"Color": "ColorSequence", "Size": "NumberSequence", "Transparency": "NumberSequence",
+                        "Squash": "NumberSequence", "Lifetime": "NumberRange", "Speed": "NumberRange",
+                        "Rotation": "NumberRange", "RotSpeed": "NumberRange", "SpreadAngle": "Vector2"},
+    "Beam": {"Color": "ColorSequence", "Transparency": "NumberSequence"},
+    "Trail": {"Color": "ColorSequence", "Transparency": "NumberSequence", "WidthScale": "NumberSequence"},
+    "UIGradient": {"Color": "ColorSequence", "Transparency": "NumberSequence"},
+}
+INSTANCE_VAR_RE = re.compile(r"""\blocal\s+([A-Za-z_]\w*)\s*(?::\s*[\w.]+\??\s*)?=\s*Instance\.new\(\s*["'](\w+)["']""")
+ASSIGN_RE = re.compile(r"(?<![\w.:])([A-Za-z_]\w*)\.([A-Za-z_]\w*)\s*=(?!=)[ \t]*([^\n]*)")
+NUMBER_RE = re.compile(r"-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?")
+CONSTRUCTOR_RE = re.compile(r"(Color3|BrickColor|ColorSequence|NumberSequence|NumberRange|Vector2|Vector3)\s*\.")
+LOCAL_NAMES_RE = re.compile(r"\blocal\s+(?!function\b)([A-Za-z_][^=\n]*)")
+FOR_NAMES_RE = re.compile(r"\bfor\s+([A-Za-z_][\w\s,:]*?)\s+(?:in\b|=)")
+FUNCTION_RE = re.compile(r"\bfunction\b[^(\n]*\(")
+
+
+def _split_top(text: str) -> list:
+    """Split on commas outside brackets, so `a: { x: number, y: number }, b` gives two parts."""
+    parts, depth, start = [], 0, 0
+    for i, ch in enumerate(text):
+        depth += ch in "([{"
+        depth -= ch in ")]}"
+        if ch == "," and depth == 0:
+            parts.append(text[start:i])
+            start = i + 1
+    return parts + [text[start:]]
+
+
+def _bindings(code: str) -> list:
+    """(offset, name) for every local, loop variable, and function parameter."""
+    out = []
+    for m in LOCAL_NAMES_RE.finditer(code):
+        out += [(m.start(), part.split(":")[0].strip()) for part in _split_top(m.group(1))]
+    for m in FOR_NAMES_RE.finditer(code):
+        out += [(m.start(), part.split(":")[0].strip()) for part in m.group(1).split(",")]
+    for m in FUNCTION_RE.finditer(code):
+        depth, end = 1, len(code)
+        for i in range(m.end(), len(code)):
+            depth += code[i] in "([{"
+            depth -= code[i] in ")]}"
+            if depth == 0:
+                end = i
+                break
+        out += [(m.end(), part.split(":")[0].strip()) for part in _split_top(code[m.end():end])]
+    return sorted(out)
+
+
+def _value_type_issues(text: str, code: str, rel: str) -> list[Issue]:
+    """`emitter.Color = Color3...` and similar, for instances created with `local x = Instance.new(...)`."""
+    kept = re.sub(r'"(?:\\.|[^"\\\n])*"|\'(?:\\.|[^\'\\\n])*\'|--\[(=*)\[.*?\]\1\]|--[^\n]*',
+                  lambda m: m.group(0) if m.group(0)[0] in "\"'" else re.sub(r"[^\n]", " ", m.group(0)),
+                  text, flags=re.S)  # comments blanked, strings kept: class names are strings
+    classes = {m.start(): m.group(2) for m in INSTANCE_VAR_RE.finditer(kept)}
+    if not set(classes.values()) & set(VALUE_TYPES):
+        return []
+    bindings = _bindings(code)
+    issues = []
+    for m in ASSIGN_RE.finditer(code):
+        latest = [pos for pos, name in bindings if name == m.group(1) and pos < m.start()]
+        cls = classes.get(latest[-1]) if latest else None  # the latest declaration must be the Instance.new
+        expected = VALUE_TYPES.get(cls, {}).get(m.group(2)) if cls else None
+        if not expected:
+            continue
+        rhs = m.group(3).strip().rstrip(";").strip()
+        found = CONSTRUCTOR_RE.match(rhs)
+        got = "number" if NUMBER_RE.fullmatch(rhs) else found.group(1) if found else None
+        if got and got != expected:
+            issues.append(Issue("error", rel, _line(code, m.start()),
+                                f"{cls}.{m.group(2)} takes a {expected}, not a {got}; this errors at run time"))
     return issues
 
 
@@ -481,6 +557,13 @@ ROBLOX_BRIEF = ("Roblox: assume many players are on phones (default thumbstick a
                 "with Scale) and give them a reason to play together. A new player should act within 10 seconds and "
                 "earn something within 60. The server decides every outcome. If roblox-forge is connected, run "
                 "map_remotes and audit_feel on the project before you finish.")
+POLISH_RE = re.compile(r"\b(?:vfx|sfx|effects?|particles?|trails?|beams?|sounds?|audio|music|juice|juicy|polish|"
+                       r"feedback|ui|hud|menus?|buttons?|animations?|tweens?)\b", re.I)
+POLISH_BRIEF = ("Roblox polish: layer each important moment (particles, a sound, a quick tween or camera shake) and "
+                "start it the frame the player acts. Use only real assets: built-in rbxasset:// files, the user's "
+                "uploads, or IDs found with Roblox Studio's search_asset tool; never invent an asset ID. If roblox-forge "
+                "is connected, start effects from vfx_recipe and run audit_polish and audit_feel before you finish. If "
+                "Roblox Studio's MCP server is connected, play-test with start_stop_play and look with screen_capture.")
 MAX_LINE_SHOWN = 100
 
 
@@ -738,15 +821,21 @@ def on_user_prompt_submit(event: dict) -> Optional[dict]:
     prompt = event.get("prompt")
     if not isinstance(prompt, str) or not CREATIVE_VERB_RE.search(prompt):
         return None
-    if not GAME_REQUEST_RE.search(prompt) and not LEVEL_RE.search(prompt):
+    game, level, polish = GAME_REQUEST_RE.search(prompt), LEVEL_RE.search(prompt), POLISH_RE.search(prompt)
+    if not game and not level and not polish:
         return None
     projects = detect_all(Path(event.get("cwd") or os.getcwd()))
-    if not GAME_REQUEST_RE.search(prompt) and not projects:
-        return None  # level and mechanic words mean a game only inside a game project
-    brief = CREATIVE_BRIEF
-    if ROBLOX_RE.search(prompt) or any(p.engine == "roblox" for p in projects):
-        brief += "\n" + ROBLOX_BRIEF
-    return {"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": brief}}
+    roblox = bool(ROBLOX_RE.search(prompt)) or any(p.engine == "roblox" for p in projects)
+    briefs = []
+    if game or (level and projects):  # level and mechanic words mean a game only inside a game project
+        briefs.append(CREATIVE_BRIEF)
+        if roblox:
+            briefs.append(ROBLOX_BRIEF)
+    if polish and roblox:
+        briefs.append(POLISH_BRIEF)
+    if not briefs:
+        return None
+    return {"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": "\n".join(briefs)}}
 
 
 def on_pre_tool_use(event: dict) -> Optional[dict]:

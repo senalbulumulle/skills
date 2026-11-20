@@ -12,6 +12,7 @@ Build Roblox code where the server owns every outcome, data never gets lost or d
 1. **Start from the template.** For a new game run `scripts/new_project.py my-game --name "My Game"`, then `cd my-game && rojo serve` and connect from the Rojo plugin in Studio (Rojo 7.2 or newer, for `.luau` files). It contains:
    - `src/server/PlayerData.luau`: session-locked saves via `UpdateAsync`, retries with backoff, new-field reconciliation, `saveAll` for shutdown.
    - `src/server/RemoteGuard.luau`: argument checks and per-player rate limits for remotes.
+   - `src/shared/Juice.luau`: tween presets, trauma camera shake, count-up numbers, and a sound gate that stops stacking and varies pitch. Pure Luau, so it is tested outside Studio.
    - `src/server/Main.server.luau` and `src/client/Main.client.luau`: wiring examples (load and kick on failure, leaderstats, a validated remote, autosave, `BindToClose`).
    - Remotes declared in `default.project.json`, so they exist before any script runs.
    For an existing place, copy the modules in and adopt the same rules.

@@ -635,3 +635,357 @@ def audit_feel(path: str) -> dict:
             "findings": shown, "more_findings": hidden, "unverified": unverified[:MAX_FINDINGS],
             "note": "Heuristic: finds whether feedback exists in each handler, not whether it feels good. Check "
                     "timing and strength in a play test."}
+
+
+# ---------------------------------------------------------------------------------------------
+# Polish: effect, sound, and UI checks against catalog.json (built by studio_catalog.py from a Roblox Studio
+# install), plus effect recipes that only use members and ranges from that catalog.
+CATALOG_PATH = Path(__file__).resolve().parent / "catalog.json"
+_CATALOG: dict | None = None
+
+
+def _catalog() -> dict:
+    global _CATALOG
+    if _CATALOG is None:
+        _CATALOG = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+    return _CATALOG
+
+
+def _members(cls: str) -> set[str] | None:
+    """Every member of cls including inherited ones, or None when cls isn't in the catalog."""
+    classes = _catalog()["classes"]
+    if cls not in classes:
+        return None
+    out: set[str] = set()
+    name: str | None = cls
+    while name:
+        out |= set(classes[name]["members"])
+        name = classes[name]["parent"]
+    return out
+
+
+def _range(cls: str, prop: str) -> list | None:
+    classes = _catalog()["classes"]
+    name: str | None = cls
+    while name:
+        if prop in classes[name]["ranges"]:
+            return classes[name]["ranges"][prop]
+        name = classes[name]["parent"]
+    return None
+
+
+def _deprecated(cls: str, prop: str) -> bool:
+    classes = _catalog()["classes"]
+    name: str | None = cls
+    while name:
+        if prop in classes[name]["deprecated"]:
+            return True
+        name = classes[name]["parent"]
+    return False
+
+
+# Properties whose value type is a sequence, range, or vector: assigning a Color3 or a plain number errors at
+# run time. Hand-checked; game_hooks.py keeps an identical copy (tools/test_codex_hooks.py enforces it).
+VALUE_TYPES = {
+    "ParticleEmitter": {"Color": "ColorSequence", "Size": "NumberSequence", "Transparency": "NumberSequence",
+                        "Squash": "NumberSequence", "Lifetime": "NumberRange", "Speed": "NumberRange",
+                        "Rotation": "NumberRange", "RotSpeed": "NumberRange", "SpreadAngle": "Vector2"},
+    "Beam": {"Color": "ColorSequence", "Transparency": "NumberSequence"},
+    "Trail": {"Color": "ColorSequence", "Transparency": "NumberSequence", "WidthScale": "NumberSequence"},
+    "UIGradient": {"Color": "ColorSequence", "Transparency": "NumberSequence"},
+}
+NUMBER_RE = re.compile(r"-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?")
+CONSTRUCTOR_RE = re.compile(r"(Color3|BrickColor|ColorSequence|NumberSequence|NumberRange|Vector2|Vector3)\s*\.")
+INSTANCE_VAR_RE = re.compile(r"""\blocal\s+([A-Za-z_]\w*)\s*(?::\s*[\w.]+\??\s*)?=\s*Instance\.new\(\s*["'](\w+)["']""")
+ASSIGN_RE = re.compile(r"(?<![\w.:])([A-Za-z_]\w*)\.([A-Za-z_]\w*)\s*=(?!=)[ \t]*([^\n]*)")
+LEGACY_FONT_RE = re.compile(r"\bEnum\.Font\.(Legacy|Arial|ArialBold)\b")
+BUILTIN_PATH_RE = re.compile(r"rbxasset://(?:textures/particles|sounds)/[^\"'\s\]]+")
+
+
+LOCAL_NAMES_RE = re.compile(r"\blocal\s+(?!function\b)([A-Za-z_][^=\n]*)")
+FOR_NAMES_RE = re.compile(r"\bfor\s+([A-Za-z_][\w\s,:]*?)\s+(?:in\b|=)")
+FUNCTION_RE = re.compile(r"\bfunction\b[^(\n]*\(")
+
+
+def _split_top(text: str) -> list[str]:
+    """Split on commas outside brackets, so `a: { x: number, y: number }, b` gives two parts."""
+    parts, depth, start = [], 0, 0
+    for i, ch in enumerate(text):
+        depth += ch in "([{"
+        depth -= ch in ")]}"
+        if ch == "," and depth == 0:
+            parts.append(text[start:i])
+            start = i + 1
+    return parts + [text[start:]]
+
+
+def _bindings(code: str) -> list[tuple[int, str]]:
+    """(offset, name) for every local, loop variable, and function parameter, so a name can be resolved to its
+    latest declaration rather than an older Instance.new of the same name."""
+    out = []
+    for m in LOCAL_NAMES_RE.finditer(code):
+        out += [(m.start(), part.split(":")[0].strip()) for part in _split_top(m.group(1))]
+    for m in FOR_NAMES_RE.finditer(code):
+        out += [(m.start(), part.split(":")[0].strip()) for part in m.group(1).split(",")]
+    for m in FUNCTION_RE.finditer(code):
+        params = code[m.end():_paren_end(code, m.end() - 1) - 1]
+        out += [(m.end(), part.split(":")[0].strip()) for part in _split_top(params)]
+    return sorted(out)
+
+
+def _value_type(rhs: str) -> str | None:
+    rhs = rhs.strip().rstrip(";").strip()
+    if NUMBER_RE.fullmatch(rhs):
+        return "number"
+    m = CONSTRUCTOR_RE.match(rhs)
+    return m.group(1) if m else None
+
+
+def audit_polish(path: str) -> dict:
+    """Heuristic scan of Luau sources for effect, sound, and UI code that errors or looks unfinished: members
+    that don't exist on the created class, wrong value types for sequence properties, deprecated members,
+    values outside Studio's editor ranges, built-in file paths that don't exist, emitters left at default
+    look, sounds with no SoundId, scaled text with no size limit, and dated fonts."""
+    root = Path(path).expanduser().resolve()
+    if not root.exists():
+        return {"ok": False, "error": f"not found: {root}"}
+    catalog = _catalog()
+    builtin = {a for paths in catalog["builtin_assets"].values() for a in paths}
+    files = _luau_files(root)
+    findings: list[dict] = []
+    instances = 0
+
+    def add(severity: str, where: str, issue: str) -> None:
+        findings.append({"severity": severity, "where": where, "issue": issue})
+
+    for f in files:
+        try:
+            source = f.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        text = _blank_lua(source, strings=False)
+        code = _blank_lua(source, strings=True)
+        rel = _rel(f, root)
+        declared = [(m.start(), m.group(1), m.group(2)) for m in INSTANCE_VAR_RE.finditer(text)]
+        instances += len(declared)
+        classes = {pos: cls for pos, _, cls in declared}
+        assigned: dict[int, dict[str, str]] = {pos: {} for pos, _, _ in declared}
+        bindings = _bindings(code)
+        for m in ASSIGN_RE.finditer(code):
+            latest = [pos for pos, name in bindings if name == m.group(1) and pos < m.start()]
+            if not latest or latest[-1] not in classes:
+                continue  # not a local, or most recently bound to something other than Instance.new
+            pos, cls = latest[-1], classes[latest[-1]]
+            prop, rhs = m.group(2), text[m.start(3):m.end(3)]
+            assigned[pos][prop] = rhs.strip()
+            members = _members(cls)
+            if members is None:
+                continue
+            where = f"{rel}:{_line_of(code, m.start())}"
+            if prop not in members:
+                add("high", where, f"{cls} has no member {prop!r}, so this line errors when it runs")
+                continue
+            if _deprecated(cls, prop):
+                add("medium", where, f"{cls}.{prop} is deprecated")
+            expected = VALUE_TYPES.get(cls, {}).get(prop)
+            got = _value_type(code[m.start(3):m.end(3)])
+            if expected and got and got != expected:
+                add("high", where, f"{cls}.{prop} takes a {expected}, not a {got}; this line errors when it runs")
+            limits = _range(cls, prop)
+            if got == "number" and limits and not expected:
+                value = float(code[m.start(3):m.end(3)].strip().rstrip(";"))
+                if not limits[0] <= value <= limits[1]:
+                    add("low", where, f"{cls}.{prop} = {value:g} is outside the {limits[0]} to {limits[1]} range "
+                                      "Studio's editor offers")
+        has_size_limit = any(cls == "UITextSizeConstraint" for _, _, cls in declared)
+        for pos, name, cls in declared:
+            props, where = assigned[pos], f"{rel}:{_line_of(text, pos)}"
+            if cls == "ParticleEmitter" and not {"Texture", "Color", "Size"} & set(props):
+                add("low", where, f"ParticleEmitter {name!r} keeps its default texture, color, and size; give it "
+                                  "a look that fits the game (vfx_recipe has starting points)")
+            if cls == "Sound" and "SoundId" not in props:
+                add("medium", where, f"Sound {name!r} never gets a SoundId, so it plays nothing")
+            elif cls == "Sound" and "SoundGroup" not in props:
+                add("low", where, f"Sound {name!r} has no SoundGroup, so a volume setting can't reach it")
+            if cls in ("TextLabel", "TextButton", "TextBox") and props.get("TextScaled") == "true" \
+                    and not has_size_limit:
+                add("low", where, f"{name!r} uses TextScaled with no UITextSizeConstraint, so its text grows huge "
+                                  "on large screens")
+        for m in LEGACY_FONT_RE.finditer(code):
+            add("low", f"{rel}:{_line_of(code, m.start())}",
+                f"Enum.Font.{m.group(1)} looks dated; try BuilderSans or a font that fits the game's style")
+        for m in BUILTIN_PATH_RE.finditer(text):
+            if m.group(0) not in builtin:
+                add("high", f"{rel}:{_line_of(text, m.start())}",
+                    f"{m.group(0)} is not a built-in file in Roblox Studio {catalog['studio_version']}")
+    order = {"high": 0, "medium": 1, "low": 2}
+    findings.sort(key=lambda x: order[x["severity"]])
+    shown, hidden = _capped(findings)
+    return {"ok": not any(x["severity"] in ("high", "medium") for x in findings), "files_scanned": len(files),
+            "instances": instances, "findings": shown, "more_findings": hidden,
+            "catalog": f"Roblox Studio {catalog['studio_version']}",
+            "note": "Heuristic: follows instances created with `local x = Instance.new(...)` in the same file. "
+                    "It finds code that errors or looks unfinished, not whether an effect looks good: check that "
+                    "in a play test."}
+
+
+def _num(x: float) -> str:
+    return f"{x:g}"
+
+
+def _seq(*points: tuple[float, float]) -> tuple:
+    keys = ", ".join(f"NumberSequenceKeypoint.new({_num(t)}, {_num(v)})" for t, v in points)
+    return "NumberSequence", f"NumberSequence.new({{{keys}}})", [v for _, v in points], [t for t, _ in points]
+
+
+def _rng(a: float, b: float) -> tuple:
+    return "NumberRange", f"NumberRange.new({_num(a)}, {_num(b)})", [a, b], None
+
+
+def _vec(kind: str, *xs: float) -> tuple:
+    return kind, f"{kind}.new({', '.join(_num(x) for x in xs)})", [], None
+
+
+def _n(x: float) -> tuple:
+    return "number", _num(x), [x], None
+
+
+def _raw(expr: str) -> tuple:
+    return None, expr, [], None
+
+
+SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
+SMOKE = "rbxasset://textures/particles/smoke_main.dds"
+COLOR = ("ColorSequence", None, [], None)  # filled from the color argument
+# effect: summary, default color, function signature, instances [(var, class, [(prop, value)])], usage.
+RECIPES = {
+    "hit_spark": {
+        "summary": "a quick burst of bright sparks for hits and impacts", "color": "#ffd166",
+        "signature": "makeHitSpark(parent: Instance): ParticleEmitter", "returns": "emitter",
+        "instances": [("emitter", "ParticleEmitter", [
+            ("Name", _raw('"HitSpark"')), ("Texture", _raw(f'"{SPARKLE}"')), ("Color", COLOR),
+            ("LightEmission", _n(1)), ("Brightness", _n(2)), ("Size", _seq((0, 0.5), (1, 0))),
+            ("Transparency", _seq((0, 0), (1, 1))), ("Lifetime", _rng(0.15, 0.3)), ("Speed", _rng(12, 20)),
+            ("SpreadAngle", _vec("Vector2", 180, 180)), ("Drag", _n(5)), ("Rate", _n(0)),
+            ("Parent", _raw("parent"))])],
+        "use": "Call emitter:Emit(12) on each hit, with a hit sound and a short camera shake.",
+    },
+    "pickup_glow": {
+        "summary": "soft rising sparkles that mark a collectible", "color": "#7cf3ff",
+        "signature": "makePickupGlow(parent: Instance): ParticleEmitter", "returns": "emitter",
+        "instances": [("emitter", "ParticleEmitter", [
+            ("Name", _raw('"PickupGlow"')), ("Texture", _raw(f'"{SPARKLE}"')), ("Color", COLOR),
+            ("LightEmission", _n(1)), ("Size", _seq((0, 0), (0.3, 0.4), (1, 0))),
+            ("Transparency", _seq((0, 1), (0.2, 0), (1, 1))), ("Lifetime", _rng(0.8, 1.2)),
+            ("Speed", _rng(0.5, 1)), ("SpreadAngle", _vec("Vector2", 180, 180)),
+            ("Acceleration", _vec("Vector3", 0, 2, 0)), ("Rate", _n(8)), ("Parent", _raw("parent"))])],
+        "use": "Leave it on while the item waits; on pickup set emitter.Rate = 0 and call emitter:Emit(15).",
+    },
+    "level_up": {
+        "summary": "an upward fountain of sparks for level-ups and big rewards", "color": "#b388ff",
+        "signature": "makeLevelUp(parent: Instance): ParticleEmitter", "returns": "emitter",
+        "instances": [("emitter", "ParticleEmitter", [
+            ("Name", _raw('"LevelUp"')), ("Texture", _raw(f'"{SPARKLE}"')), ("Color", COLOR),
+            ("LightEmission", _n(1)), ("Brightness", _n(3)), ("Size", _seq((0, 0.6), (1, 0))),
+            ("Transparency", _seq((0, 0), (0.8, 0.2), (1, 1))), ("Lifetime", _rng(0.8, 1.4)),
+            ("Speed", _rng(10, 16)), ("SpreadAngle", _vec("Vector2", 25, 25)),
+            ("Acceleration", _vec("Vector3", 0, -12, 0)), ("EmissionDirection", _raw("Enum.NormalId.Top")),
+            ("Rate", _n(0)), ("Parent", _raw("parent"))])],
+        "use": "Call emitter:Emit(40) when the player levels up, with a rising sound and a UI pop.",
+    },
+    "smoke_puff": {
+        "summary": "a short puff of smoke for landings, dashes, and despawns", "color": "#c8c8c8",
+        "signature": "makeSmokePuff(parent: Instance): ParticleEmitter", "returns": "emitter",
+        "instances": [("emitter", "ParticleEmitter", [
+            ("Name", _raw('"SmokePuff"')), ("Texture", _raw(f'"{SMOKE}"')), ("Color", COLOR),
+            ("LightInfluence", _n(1)), ("Size", _seq((0, 1), (1, 3))), ("Transparency", _seq((0, 0.4), (1, 1))),
+            ("Lifetime", _rng(0.6, 1)), ("Speed", _rng(2, 4)), ("SpreadAngle", _vec("Vector2", 180, 180)),
+            ("Rotation", _rng(-180, 180)), ("RotSpeed", _rng(-40, 40)), ("Drag", _n(3)), ("Rate", _n(0)),
+            ("Parent", _raw("parent"))])],
+        "use": "Call emitter:Emit(6) at the moment of impact.",
+    },
+    "dash_trail": {
+        "summary": "a fading ribbon behind a moving part, for dashes and fast attacks", "color": "#ffffff",
+        "signature": "makeDashTrail(part: BasePart): Trail", "returns": "trail",
+        "instances": [
+            ("top", "Attachment", [("Name", _raw('"TrailTop"')), ("Position", _vec("Vector3", 0, 0.5, 0)),
+                                   ("Parent", _raw("part"))]),
+            ("bottom", "Attachment", [("Name", _raw('"TrailBottom"')), ("Position", _vec("Vector3", 0, -0.5, 0)),
+                                      ("Parent", _raw("part"))]),
+            ("trail", "Trail", [
+                ("Name", _raw('"DashTrail"')), ("Attachment0", _raw("top")), ("Attachment1", _raw("bottom")),
+                ("Color", COLOR), ("Transparency", _seq((0, 0.2), (1, 1))), ("WidthScale", _seq((0, 1), (1, 0))),
+                ("Lifetime", _n(0.25)), ("MinLength", _n(0.1)), ("LightEmission", _n(0.6)),
+                ("FaceCamera", _raw("true")), ("Enabled", _raw("false")), ("Parent", _raw("part"))])],
+        "use": "Set trail.Enabled = true when the dash starts and false when it ends.",
+    },
+    "magic_beam": {
+        "summary": "a glowing curved beam between two attachments, for tethers, lasers, and spells",
+        "color": "#ff5fa2", "signature": "makeMagicBeam(from: Attachment, to: Attachment): Beam", "returns": "beam",
+        "instances": [("beam", "Beam", [
+            ("Name", _raw('"MagicBeam"')), ("Attachment0", _raw("from")), ("Attachment1", _raw("to")),
+            ("Color", COLOR), ("Transparency", _seq((0, 0), (1, 0.3))), ("Width0", _n(0.6)), ("Width1", _n(0.2)),
+            ("CurveSize0", _n(2)), ("CurveSize1", _n(-2)), ("Segments", _n(20)), ("LightEmission", _n(1)),
+            ("FaceCamera", _raw("true")), ("Parent", _raw("from"))])],
+        "use": "Parent it once; toggle beam.Enabled to show and hide it.",
+    },
+}
+HEX_RE = re.compile(r"#?([0-9a-fA-F]{6})")
+
+
+def _color_sequence(hex_color: str) -> str:
+    rgb = [int(hex_color[i:i + 2], 16) for i in (0, 2, 4)]
+    bright = [round(c + (255 - c) * 0.6) for c in rgb]
+    return ("ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(%d, %d, %d)), "
+            "ColorSequenceKeypoint.new(1, Color3.fromRGB(%d, %d, %d))})" % (*bright, *rgb))
+
+
+def _check_recipe(effect: str) -> list[str]:
+    """Problems with a recipe against the catalog: unknown members, wrong value types, out-of-range numbers."""
+    problems = []
+    for _, cls, props in RECIPES[effect]["instances"]:
+        members = _members(cls) or set()
+        for prop, (kind, _, numbers, times) in props:
+            if prop not in members:
+                problems.append(f"{cls}.{prop} is not a member")
+            expected = VALUE_TYPES.get(cls, {}).get(prop)
+            if expected and kind != expected:
+                problems.append(f"{cls}.{prop} needs a {expected}")
+            limits = _range(cls, prop)
+            if limits and any(not limits[0] <= x <= limits[1] for x in numbers):
+                problems.append(f"{cls}.{prop} is outside {limits}")
+            if times is not None and (times[0] != 0 or times[-1] != 1 or times != sorted(times)):
+                problems.append(f"{cls}.{prop} keypoints must run from 0 to 1")
+    return problems
+
+
+def vfx_recipe(effect: str, color: str | None = None) -> dict:
+    """Luau code for a ready-made effect (hit spark, pickup glow, level-up, smoke puff, dash trail, magic beam)
+    that uses only members, value types, and ranges from the Roblox Studio catalog and built-in textures.
+    `color` is a hex color such as "#ff8800"."""
+    recipe = RECIPES.get(effect)
+    if recipe is None:
+        return {"ok": False, "error": f"unknown effect {effect!r}",
+                "effects": {name: r["summary"] for name, r in RECIPES.items()}}
+    match = HEX_RE.fullmatch((color or recipe["color"]).strip())
+    if not match:
+        return {"ok": False, "error": f"color must be a hex color such as #ff8800, not {color!r}"}
+    problems = _check_recipe(effect)
+    if problems:  # only if catalog.json changed under a recipe; tools/test_roblox_forge.py checks every recipe
+        return {"ok": False, "error": "recipe doesn't match the catalog: " + "; ".join(problems)}
+    title = effect.replace("_", " ").capitalize()
+    lines = [f"-- {title}: {recipe['summary']}.",
+             f"-- {recipe['use']}",
+             f"local function {recipe['signature']}"]
+    for var, cls, props in recipe["instances"]:
+        lines.append(f'\tlocal {var} = Instance.new("{cls}")')
+        for prop, (kind, expr, _, _) in props:
+            value = _color_sequence(match.group(1)) if kind == "ColorSequence" and expr is None else expr
+            lines.append(f"\t{var}.{prop} = {value}")
+    lines += [f"\treturn {recipe['returns']}", "end"]
+    textures = sorted({expr.strip('"') for _, _, props in recipe["instances"] for p, (_, expr, _, _) in props
+                       if p == "Texture"})
+    return {"ok": True, "effect": effect, "code": "\n".join(lines) + "\n", "use": recipe["use"],
+            "builtin_textures": textures, "catalog": f"Roblox Studio {_catalog()['studio_version']}",
+            "note": "Starting values: tune size, speed, and color in a play test next to the game's other effects, "
+                    "and pair each effect with a sound."}

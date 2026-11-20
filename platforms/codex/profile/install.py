@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Install or remove the Codex "game" profile and the game-designer and game-critic agent roles.
+"""Install or remove the Codex "game" profile and the game-designer, game-critic, and
+roblox-polisher agent roles.
 
-  install.py                 write $CODEX_HOME/game.config.toml and $CODEX_HOME/agents/game-*.toml (default ~/.codex)
+  install.py                 write $CODEX_HOME/game.config.toml and a file per role in $CODEX_HOME/agents/ (default ~/.codex)
   install.py --model SLUG    use this model instead of the strongest one the installed Codex lists
   add --uninstall to remove them, --dry-run to print what would be written.
 

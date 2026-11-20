@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install the Codex "game" profile and the game-designer and game-critic agent roles, globally:
+# Install the Codex "game" profile and the game-designer, game-critic, and roblox-polisher agent roles, globally:
 # $CODEX_HOME/game.config.toml and $CODEX_HOME/agents/ (default ~/.codex).
 #
 #   scripts/codex/install-codex-profile.sh                 install or update

@@ -3,15 +3,25 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import plistlib
 import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
-FORGE = Path(__file__).resolve().parent.parent / "mcp" / "roblox-forge" / "forge.py"
-_spec = importlib.util.spec_from_file_location("forge", FORGE)
-forge = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(forge)
+FORGE_DIR = Path(__file__).resolve().parent.parent / "mcp" / "roblox-forge"
+
+
+def _load(name: str):
+    spec = importlib.util.spec_from_file_location(name, FORGE_DIR / f"{name}.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+forge = _load("forge")
+studio_catalog = _load("studio_catalog")
 
 
 class ForgeTestCase(unittest.TestCase):
@@ -41,7 +51,7 @@ class CreateAndCheckTests(ForgeTestCase):
         result = forge.check_project(str(dest))
         self.assertTrue(result["ok"], result)
         self.assertEqual(result["warnings"], [])
-        self.assertEqual(result["scripts"], {"server": 1, "client": 1, "module": 3})
+        self.assertEqual(result["scripts"], {"server": 1, "client": 1, "module": 4})
         self.assertEqual(result["rojo_build"], "ok" if shutil.which("rojo") else "rojo not installed")
         self.assertFalse(forge.create_project(str(dest))["ok"], "refuses a non-empty folder")
 
@@ -176,7 +186,7 @@ class MapRemotesTests(ForgeTestCase):
         self.assertEqual(r["findings"], [])
         [remote] = r["remotes"]
         self.assertEqual((remote["name"], remote["class"]), ("ClaimDaily", "RemoteEvent"))
-        self.assertEqual(remote["fired"], ["src/client/Main.client.luau:34 (FireServer)"])
+        self.assertEqual(remote["fired"], ["src/client/Main.client.luau:47 (FireServer)"])
         self.assertEqual(remote["handled"], ["src/server/Main.server.luau:52 (OnServerEvent)"])
 
     def test_mismatches(self):
@@ -279,6 +289,150 @@ class AuditFeelTests(ForgeTestCase):
         self.assertEqual(r["unverified"], [{"where": "Ui.client.luau:19", "action": "Activated",
                                             "feedback_may_be_in": ["Hud"]}])
         self.assertFalse(forge.audit_feel(str(self.root / "missing"))["ok"])
+
+
+class StudioCatalogTests(ForgeTestCase):
+    def fake_studio(self, classes: list[str]) -> Path:
+        res = self.root / "Studio.app" / "Contents" / "Resources"
+        (res / "content" / "api_docs").mkdir(parents=True)
+        docs = {f"@roblox/globaltype/{c}": {"documentation": "text that must not be copied", "keys": {}}
+                for c in classes}
+        docs["@roblox/globaltype/ParticleEmitter"]["keys"] = {"Rate": "@roblox/globaltype/ParticleEmitter.Rate"}
+        docs["@roblox/globaltype/GuiButton.Activated.Connect"] = {"documentation": "an event"}
+        (res / "content" / "api_docs" / "en-us.json").write_text(json.dumps(docs))
+        (res / "ReflectionMetadata.xml").write_text(
+            '<roblox><Item class="ReflectionMetadataClasses"><Item class="ReflectionMetadataClass">'
+            '<Properties><string name="Name">ParticleEmitter</string></Properties>'
+            '<Item class="ReflectionMetadataProperties"><Item class="ReflectionMetadataMember"><Properties>'
+            '<string name="Name">Rate</string><double name="UIMinimum">0</double><double name="UIMaximum">100.5'
+            '</double></Properties></Item><Item class="ReflectionMetadataMember"><Properties>'
+            '<string name="Name">Old</string><bool name="Deprecated">true</bool></Properties></Item></Item>'
+            '</Item></Item></roblox>')
+        for rel in ("textures/particles/spark.dds", "sounds/hit.ogg"):
+            (res / "content" / rel).parent.mkdir(parents=True, exist_ok=True)
+            (res / "content" / rel).write_bytes(b"")
+        with (res.parent / "Info.plist").open("wb") as f:
+            plistlib.dump({"CFBundleShortVersionString": "1.2.3"}, f)
+        return res.parent.parent
+
+    def test_extracts_names_ranges_and_paths_only(self):
+        catalog = studio_catalog.extract(self.fake_studio(list(studio_catalog.PARENTS)))
+        self.assertEqual(catalog["studio_version"], "1.2.3")
+        emitter = catalog["classes"]["ParticleEmitter"]
+        self.assertEqual((emitter["parent"], emitter["members"], emitter["ranges"], emitter["deprecated"]),
+                         ("Instance", ["Rate"], {"Rate": [0, 100.5]}, ["Old"]))
+        self.assertEqual(catalog["classes"]["GuiButton"]["members"], ["Activated"], "events come from own entries")
+        self.assertEqual(catalog["builtin_assets"], {"particle_textures": ["rbxasset://textures/particles/spark.dds"],
+                                                     "sounds": ["rbxasset://sounds/hit.ogg"]})
+        self.assertNotIn("must not be copied", json.dumps(catalog))
+        self.assertIn("| ParticleEmitter | Rate | 0 to 100.5 |", studio_catalog.reference(catalog))
+
+    def test_missing_class_or_install_fails(self):
+        with self.assertRaises(SystemExit):
+            studio_catalog.extract(self.fake_studio(["Instance", "ParticleEmitter"]))
+        with self.assertRaises(SystemExit):
+            studio_catalog.extract(self.root / "nowhere")
+
+    def test_committed_reference_matches_committed_catalog(self):
+        catalog = json.loads(studio_catalog.CATALOG.read_text())
+        self.assertEqual(studio_catalog.REFERENCE.read_text(), studio_catalog.reference(catalog))
+        self.assertEqual(set(catalog["classes"]), set(studio_catalog.PARENTS))
+
+
+class AuditPolishTests(ForgeTestCase):
+    def test_template_is_clean(self):
+        dest = self.root / "game"
+        forge.create_project(str(dest), "Game")
+        r = forge.audit_polish(str(dest))
+        self.assertTrue(r["ok"], r)
+        self.assertEqual(r["findings"], [])
+        self.assertGreaterEqual(r["instances"], 6)
+
+    def test_findings(self):
+        f = self.root / "Fx.client.luau"
+        f.write_text("\n".join([
+            'local emitter = Instance.new("ParticleEmitter")',
+            "emitter.Color = Color3.new(1, 0, 0)",  # 2: needs a ColorSequence
+            "emitter.Lifetime = 2",  # 3: needs a NumberRange
+            "emitter.Glow = 1",  # 4: no such member
+            "emitter.LightEmission = 3",  # 5: outside 0 to 1
+            'local s = Instance.new("Sound")',  # 6: no SoundId
+            "s.Volume = 0.5",
+            'local music: Sound = Instance.new("Sound")',  # 8: no SoundGroup
+            'music.SoundId = "rbxasset://sounds/oof.ogg"',
+            'local label = Instance.new("TextLabel")',  # 10: TextScaled without a size limit
+            "label.TextScaled = true",
+            "label.Font = Enum.Font.Legacy",  # 12: dated font
+            "label.Draggable = true",  # 13: deprecated on GuiObject
+            'local fx = Instance.new("ParticleEmitter")',  # 14: default look
+            "fx.Parent = workspace",
+            'local tex = "rbxasset://textures/particles/glow_main.dds"',  # 16: not a built-in file
+            "local function other()",
+            '\tlocal emitter = Instance.new("Beam")',  # the same name, now a Beam
+            "\temitter.Width0 = 1",
+            "\temitter.Color = ColorSequence.new(Color3.new(1, 1, 1))",
+            "end",
+            "-- emitter.Bogus = 1",
+            'local unknown = Instance.new("IntValue")',  # not in the catalog: skipped
+            "unknown.Anything = 1",
+        ]) + "\n")
+        r = forge.audit_polish(str(f))
+        self.assertFalse(r["ok"])
+        got = {(x["where"].split(":")[1], x["severity"]) for x in r["findings"]}
+        self.assertEqual(got, {("2", "high"), ("3", "high"), ("4", "high"), ("5", "low"), ("6", "medium"),
+                               ("8", "low"), ("10", "low"), ("12", "low"), ("13", "medium"), ("14", "low"),
+                               ("16", "high")})
+        self.assertEqual([x["severity"] for x in r["findings"]][:4], ["high"] * 4, "most severe first")
+        self.assertFalse(forge.audit_polish(str(self.root / "missing"))["ok"])
+
+    def test_names_follow_their_latest_declaration(self):
+        f = self.root / "Ui.client.luau"
+        f.write_text("\n".join([
+            'local object = Instance.new("Frame")',
+            "object.Size = UDim2.fromScale(1, 1)",
+            "local function button(parent: Instance, object: TextButton, done: () -> ())",
+            "\tobject.TextColor3 = Color3.new(1, 1, 1)",  # a parameter, not the Frame
+            "end",
+            "local object = UI.label(gui)",
+            "object.TextSize = 14",  # rebound to something else
+            "for _, object in labels do",
+            "\tobject.Text = 'x'",  # a loop variable
+            "end",
+            "local a, object: TextLabel = 1, makeLabel()",
+            "object.TextScaled = false",
+        ]) + "\n")
+        self.assertEqual(forge.audit_polish(str(f))["findings"], [])
+
+
+class VfxRecipeTests(ForgeTestCase):
+    def test_every_recipe_matches_the_catalog_and_audits_clean(self):
+        for effect in forge.RECIPES:
+            with self.subTest(effect=effect):
+                self.assertEqual(forge._check_recipe(effect), [])
+                r = forge.vfx_recipe(effect)
+                self.assertTrue(r["ok"], r)
+                f = self.root / f"{effect}.luau"
+                f.write_text(r["code"])
+                audit = forge.audit_polish(str(f))
+                self.assertEqual(audit["findings"], [], audit)
+                builtin = forge._catalog()["builtin_assets"]["particle_textures"]
+                self.assertTrue(set(r["builtin_textures"]) <= set(builtin))
+
+    @unittest.skipUnless(shutil.which("luau-compile"), "luau-compile not installed")
+    def test_recipes_compile(self):
+        for effect in forge.RECIPES:
+            f = self.root / f"{effect}.luau"
+            f.write_text(forge.vfx_recipe(effect, "#123abc")["code"])
+            proc = subprocess.run(["luau-compile", "--text", str(f)], capture_output=True, text=True)
+            self.assertEqual(proc.returncode, 0, f"{effect}: {proc.stderr}")
+
+    def test_color_and_bad_input(self):
+        code = forge.vfx_recipe("hit_spark", "#000000")["code"]
+        self.assertIn("Color3.fromRGB(153, 153, 153)), ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))", code)
+        self.assertFalse(forge.vfx_recipe("hit_spark", "red")["ok"])
+        bad = forge.vfx_recipe("fireworks")
+        self.assertFalse(bad["ok"])
+        self.assertIn("magic_beam", bad["effects"])
 
 
 @unittest.skipUnless(shutil.which("luau-analyze"), "luau-analyze not installed")

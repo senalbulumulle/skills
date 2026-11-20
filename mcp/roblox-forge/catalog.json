@@ -1,0 +1,1293 @@
+{
+ "builtin_assets": {
+  "particle_textures": [
+   "rbxasset://textures/particles/SquareParticle.png",
+   "rbxasset://textures/particles/common_alpha.dds",
+   "rbxasset://textures/particles/explosion01_core_alpha.png",
+   "rbxasset://textures/particles/explosion01_core_main.dds",
+   "rbxasset://textures/particles/explosion01_implosion_color.png",
+   "rbxasset://textures/particles/explosion01_implosion_main.dds",
+   "rbxasset://textures/particles/explosion01_shockwave_main.dds",
+   "rbxasset://textures/particles/explosion01_smoke_alpha.dds",
+   "rbxasset://textures/particles/explosion01_smoke_color_new.dds",
+   "rbxasset://textures/particles/explosion01_smoke_main.dds",
+   "rbxasset://textures/particles/explosion_alpha.dds",
+   "rbxasset://textures/particles/explosion_color.dds",
+   "rbxasset://textures/particles/fire_alpha.dds",
+   "rbxasset://textures/particles/fire_color.dds",
+   "rbxasset://textures/particles/fire_main.dds",
+   "rbxasset://textures/particles/fire_sparks_color.dds",
+   "rbxasset://textures/particles/fire_sparks_main.dds",
+   "rbxasset://textures/particles/forcefield_alpha.dds",
+   "rbxasset://textures/particles/forcefield_glow_alpha.dds",
+   "rbxasset://textures/particles/forcefield_glow_color.dds",
+   "rbxasset://textures/particles/forcefield_glow_main.dds",
+   "rbxasset://textures/particles/forcefield_vortex_color.dds",
+   "rbxasset://textures/particles/forcefield_vortex_main.dds",
+   "rbxasset://textures/particles/legacy_fire_alpha_color.dds",
+   "rbxasset://textures/particles/smoke_color.dds",
+   "rbxasset://textures/particles/smoke_main.dds",
+   "rbxasset://textures/particles/sparkles_color.dds",
+   "rbxasset://textures/particles/sparkles_main.dds"
+  ],
+  "sounds": [
+   "rbxasset://sounds/action_falling.ogg",
+   "rbxasset://sounds/action_footsteps_plastic.mp3",
+   "rbxasset://sounds/action_get_up.mp3",
+   "rbxasset://sounds/action_jump.mp3",
+   "rbxasset://sounds/action_jump_land.mp3",
+   "rbxasset://sounds/action_swim.mp3",
+   "rbxasset://sounds/impact_explosion_03.mp3",
+   "rbxasset://sounds/impact_water.mp3",
+   "rbxasset://sounds/oof.ogg",
+   "rbxasset://sounds/ouch.ogg",
+   "rbxasset://sounds/volume_slider.ogg"
+  ]
+ },
+ "classes": {
+  "Attachment": {
+   "deprecated": [
+    "WorldRotation"
+   ],
+   "members": [
+    "Axis",
+    "CFrame",
+    "GetAxis",
+    "GetConstraints",
+    "GetSecondaryAxis",
+    "Orientation",
+    "Position",
+    "Rotation",
+    "SecondaryAxis",
+    "SetAxis",
+    "SetSecondaryAxis",
+    "Visible",
+    "WorldAxis",
+    "WorldCFrame",
+    "WorldOrientation",
+    "WorldPosition",
+    "WorldRotation",
+    "WorldSecondaryAxis"
+   ],
+   "parent": "Instance",
+   "ranges": {}
+  },
+  "Beam": {
+   "deprecated": [],
+   "members": [
+    "Attachment0",
+    "Attachment1",
+    "Brightness",
+    "Color",
+    "CurveSize0",
+    "CurveSize1",
+    "Enabled",
+    "FaceCamera",
+    "LightEmission",
+    "LightInfluence",
+    "LocalTransparencyModifier",
+    "Segments",
+    "SetTextureOffset",
+    "Texture",
+    "TextureContent",
+    "TextureLength",
+    "TextureMode",
+    "TextureSpeed",
+    "Transparency",
+    "Width0",
+    "Width1",
+    "ZOffset"
+   ],
+   "parent": "Instance",
+   "ranges": {
+    "Brightness": [
+     0,
+     10
+    ],
+    "CurveSize0": [
+     -10,
+     10
+    ],
+    "CurveSize1": [
+     -10,
+     10
+    ],
+    "LightEmission": [
+     0,
+     1
+    ],
+    "LightInfluence": [
+     0,
+     1
+    ],
+    "TextureLength": [
+     0,
+     5
+    ],
+    "TextureSpeed": [
+     -1,
+     1
+    ],
+    "ZOffset": [
+     -1,
+     1
+    ]
+   }
+  },
+  "BillboardGui": {
+   "deprecated": [],
+   "members": [
+    "Active",
+    "Adornee",
+    "AlwaysOnTop",
+    "Brightness",
+    "ClipsDescendants",
+    "CurrentDistance",
+    "DistanceLowerLimit",
+    "DistanceStep",
+    "DistanceUpperLimit",
+    "ExtentsOffset",
+    "ExtentsOffsetWorldSpace",
+    "LightInfluence",
+    "MaxDistance",
+    "PlayerToHideFrom",
+    "Size",
+    "SizeOffset",
+    "StudsOffset",
+    "StudsOffsetWorldSpace"
+   ],
+   "parent": "LayerCollector",
+   "ranges": {
+    "LightInfluence": [
+     0,
+     1
+    ],
+    "MaxDistance": [
+     0,
+     1000
+    ]
+   }
+  },
+  "CanvasGroup": {
+   "deprecated": [],
+   "members": [
+    "GroupColor3",
+    "GroupTransparency"
+   ],
+   "parent": "GuiObject",
+   "ranges": {
+    "GroupTransparency": [
+     0,
+     1
+    ]
+   }
+  },
+  "Folder": {
+   "deprecated": [],
+   "members": [],
+   "parent": "Instance",
+   "ranges": {}
+  },
+  "Frame": {
+   "deprecated": [],
+   "members": [
+    "Style"
+   ],
+   "parent": "GuiObject",
+   "ranges": {}
+  },
+  "GuiBase": {
+   "deprecated": [],
+   "members": [],
+   "parent": "Instance",
+   "ranges": {}
+  },
+  "GuiBase2d": {
+   "deprecated": [],
+   "members": [
+    "AbsolutePosition",
+    "AbsoluteRotation",
+    "AbsoluteSize",
+    "AutoLocalize",
+    "Localize",
+    "RootLocalizationTable",
+    "SelectionBehaviorDown",
+    "SelectionBehaviorLeft",
+    "SelectionBehaviorRight",
+    "SelectionBehaviorUp",
+    "SelectionChanged",
+    "SelectionGroup"
+   ],
+   "parent": "GuiBase",
+   "ranges": {}
+  },
+  "GuiButton": {
+   "deprecated": [],
+   "members": [
+    "Activated",
+    "AutoButtonColor",
+    "HoverHapticEffect",
+    "Modal",
+    "MouseButton1Click",
+    "MouseButton1Down",
+    "MouseButton1Up",
+    "MouseButton2Click",
+    "MouseButton2Down",
+    "MouseButton2Up",
+    "PressHapticEffect",
+    "SecondaryActivated",
+    "Selected",
+    "Style"
+   ],
+   "parent": "GuiObject",
+   "ranges": {}
+  },
+  "GuiLabel": {
+   "deprecated": [],
+   "members": [],
+   "parent": "GuiObject",
+   "ranges": {}
+  },
+  "GuiObject": {
+   "deprecated": [
+    "BackgroundColor",
+    "BorderColor",
+    "DragBegin",
+    "DragStopped",
+    "Draggable"
+   ],
+   "members": [
+    "Active",
+    "AnchorPoint",
+    "AutomaticSize",
+    "BackgroundColor",
+    "BackgroundColor3",
+    "BackgroundTransparency",
+    "BorderColor",
+    "BorderColor3",
+    "BorderMode",
+    "BorderSizePixel",
+    "ClipsDescendants",
+    "DragBegin",
+    "DragStopped",
+    "Draggable",
+    "GuiState",
+    "InputBegan",
+    "InputChanged",
+    "InputEnded",
+    "InputSink",
+    "Interactable",
+    "LayoutOrder",
+    "MouseEnter",
+    "MouseLeave",
+    "MouseMoved",
+    "MouseWheelBackward",
+    "MouseWheelForward",
+    "NextSelectionDown",
+    "NextSelectionLeft",
+    "NextSelectionRight",
+    "NextSelectionUp",
+    "Position",
+    "Rotation",
+    "Selectable",
+    "SelectionGained",
+    "SelectionImageObject",
+    "SelectionLost",
+    "SelectionOrder",
+    "Size",
+    "SizeConstraint",
+    "TouchLongPress",
+    "TouchPan",
+    "TouchPinch",
+    "TouchRotate",
+    "TouchSwipe",
+    "TouchTap",
+    "Transparency",
+    "TweenPosition",
+    "TweenSize",
+    "TweenSizeAndPosition",
+    "Visible",
+    "ZIndex"
+   ],
+   "parent": "GuiBase2d",
+   "ranges": {
+    "BackgroundTransparency": [
+     0,
+     1
+    ],
+    "BorderSizePixel": [
+     0,
+     100
+    ],
+    "Rotation": [
+     -180,
+     180
+    ]
+   }
+  },
+  "Highlight": {
+   "deprecated": [],
+   "members": [
+    "Adornee",
+    "DepthMode",
+    "Enabled",
+    "FillColor",
+    "FillTransparency",
+    "OutlineColor",
+    "OutlineTransparency"
+   ],
+   "parent": "Instance",
+   "ranges": {
+    "FillTransparency": [
+     0,
+     1
+    ],
+    "OutlineTransparency": [
+     0,
+     1
+    ]
+   }
+  },
+  "ImageButton": {
+   "deprecated": [],
+   "members": [
+    "HoverImage",
+    "HoverImageContent",
+    "Image",
+    "ImageColor3",
+    "ImageContent",
+    "ImageRectOffset",
+    "ImageRectSize",
+    "ImageTransparency",
+    "IsLoaded",
+    "PressedImage",
+    "PressedImageContent",
+    "ResampleMode",
+    "ScaleType",
+    "SliceCenter",
+    "SliceScale",
+    "TileSize"
+   ],
+   "parent": "GuiButton",
+   "ranges": {
+    "ImageTransparency": [
+     0,
+     1
+    ]
+   }
+  },
+  "ImageLabel": {
+   "deprecated": [],
+   "members": [
+    "Image",
+    "ImageColor3",
+    "ImageContent",
+    "ImageRectOffset",
+    "ImageRectSize",
+    "ImageTransparency",
+    "IsLoaded",
+    "ResampleMode",
+    "ScaleType",
+    "SliceCenter",
+    "SliceScale",
+    "TileSize"
+   ],
+   "parent": "GuiLabel",
+   "ranges": {
+    "ImageTransparency": [
+     0,
+     1
+    ]
+   }
+  },
+  "Instance": {
+   "deprecated": [
+    "Remove",
+    "children",
+    "clone",
+    "findFirstChild",
+    "getChildren",
+    "isA",
+    "remove"
+   ],
+   "members": [
+    "AddTag",
+    "AncestryChanged",
+    "Archivable",
+    "AttributeChanged",
+    "Capabilities",
+    "ChildAdded",
+    "ChildRemoved",
+    "ClearAllChildren",
+    "Clone",
+    "DescendantAdded",
+    "DescendantRemoving",
+    "Destroy",
+    "Destroying",
+    "FindFirstAncestor",
+    "FindFirstAncestorOfClass",
+    "FindFirstAncestorWhichIsA",
+    "FindFirstChild",
+    "FindFirstChildOfClass",
+    "FindFirstChildWhichIsA",
+    "FindFirstDescendant",
+    "GetActor",
+    "GetAttribute",
+    "GetAttributeChangedSignal",
+    "GetAttributes",
+    "GetChildren",
+    "GetDebugId",
+    "GetDescendants",
+    "GetFullName",
+    "GetStyled",
+    "GetStyledPropertyChangedSignal",
+    "GetTags",
+    "HasTag",
+    "IsAncestorOf",
+    "IsDescendantOf",
+    "IsInSandbox",
+    "IsPropertyModified",
+    "Name",
+    "Parent",
+    "PredictionMode",
+    "QueryDescendants",
+    "Remove",
+    "RemoveTag",
+    "ResetPropertyToDefault",
+    "RobloxLocked",
+    "Sandboxed",
+    "SetAttribute",
+    "StyledPropertiesChanged",
+    "UniqueId",
+    "WaitForChild",
+    "archivable",
+    "childAdded",
+    "children",
+    "clone",
+    "destroy",
+    "findFirstChild",
+    "getChildren",
+    "isDescendantOf",
+    "remove"
+   ],
+   "parent": null,
+   "ranges": {}
+  },
+  "LayerCollector": {
+   "deprecated": [],
+   "members": [
+    "Enabled",
+    "GetLayoutNodeTree",
+    "ResetOnSpawn",
+    "ZIndexBehavior"
+   ],
+   "parent": "GuiBase2d",
+   "ranges": {}
+  },
+  "Light": {
+   "deprecated": [],
+   "members": [
+    "Brightness",
+    "Color",
+    "Enabled",
+    "Shadows"
+   ],
+   "parent": "Instance",
+   "ranges": {
+    "Brightness": [
+     0,
+     40
+    ]
+   }
+  },
+  "ParticleEmitter": {
+   "deprecated": [],
+   "members": [
+    "Acceleration",
+    "Brightness",
+    "Clear",
+    "Color",
+    "Drag",
+    "EmissionDirection",
+    "Emit",
+    "Enabled",
+    "FlipbookBlendFrames",
+    "FlipbookFramerate",
+    "FlipbookIncompatible",
+    "FlipbookLayout",
+    "FlipbookMode",
+    "FlipbookSizeX",
+    "FlipbookSizeY",
+    "FlipbookStartRandom",
+    "Lifetime",
+    "LightEmission",
+    "LightInfluence",
+    "LocalTransparencyModifier",
+    "LockedToPart",
+    "Orientation",
+    "Rate",
+    "RotSpeed",
+    "Rotation",
+    "Shape",
+    "ShapeInOut",
+    "ShapePartial",
+    "ShapeStyle",
+    "Size",
+    "Speed",
+    "SpreadAngle",
+    "Squash",
+    "Texture",
+    "TextureContent",
+    "TimeScale",
+    "Transparency",
+    "VelocityInheritance",
+    "VelocitySpread",
+    "WindAffectsDrag",
+    "ZOffset"
+   ],
+   "parent": "Instance",
+   "ranges": {
+    "Brightness": [
+     0,
+     10
+    ],
+    "Drag": [
+     0,
+     5
+    ],
+    "FlipbookFramerate": [
+     0,
+     30
+    ],
+    "Lifetime": [
+     0,
+     5
+    ],
+    "LightEmission": [
+     0,
+     1
+    ],
+    "LightInfluence": [
+     0,
+     1
+    ],
+    "Rate": [
+     0,
+     100
+    ],
+    "RotSpeed": [
+     -360,
+     360
+    ],
+    "Rotation": [
+     -180,
+     180
+    ],
+    "ShapePartial": [
+     0,
+     1
+    ],
+    "Size": [
+     0,
+     10
+    ],
+    "Speed": [
+     0,
+     100
+    ],
+    "Squash": [
+     -3,
+     3
+    ],
+    "TimeScale": [
+     0,
+     1
+    ],
+    "Transparency": [
+     0,
+     1
+    ],
+    "VelocityInheritance": [
+     0,
+     1
+    ]
+   }
+  },
+  "PointLight": {
+   "deprecated": [],
+   "members": [
+    "Range"
+   ],
+   "parent": "Light",
+   "ranges": {
+    "Range": [
+     0,
+     120
+    ]
+   }
+  },
+  "ScreenGui": {
+   "deprecated": [],
+   "members": [
+    "ClipToDeviceSafeArea",
+    "DisplayOrder",
+    "IgnoreGuiInset",
+    "SafeAreaCompatibility",
+    "ScreenInsets"
+   ],
+   "parent": "LayerCollector",
+   "ranges": {}
+  },
+  "ScrollingFrame": {
+   "deprecated": [],
+   "members": [
+    "AbsoluteCanvasSize",
+    "AbsoluteWindowSize",
+    "AutomaticCanvasSize",
+    "BottomImage",
+    "BottomImageContent",
+    "CanvasPosition",
+    "CanvasSize",
+    "ElasticBehavior",
+    "GetScrollVelocity",
+    "HorizontalScrollBarInset",
+    "MidImage",
+    "MidImageContent",
+    "ResetScrollVelocity",
+    "ScrollBarImageColor3",
+    "ScrollBarImageTransparency",
+    "ScrollBarThickness",
+    "ScrollingDirection",
+    "ScrollingEnabled",
+    "TopImage",
+    "TopImageContent",
+    "VerticalScrollBarInset",
+    "VerticalScrollBarPosition"
+   ],
+   "parent": "GuiObject",
+   "ranges": {
+    "ScrollBarImageTransparency": [
+     0,
+     1
+    ],
+    "ScrollBarThickness": [
+     0,
+     100
+    ]
+   }
+  },
+  "Sound": {
+   "deprecated": [
+    "play"
+   ],
+   "members": [
+    "AudioContent",
+    "DidLoop",
+    "EmitterSize",
+    "Ended",
+    "IsLoaded",
+    "IsPaused",
+    "IsPlaying",
+    "Loaded",
+    "LoopRegion",
+    "Looped",
+    "MaxDistance",
+    "MinDistance",
+    "Pause",
+    "Paused",
+    "Pitch",
+    "Play",
+    "PlayOnRemove",
+    "PlaybackLoudness",
+    "PlaybackRegion",
+    "PlaybackRegionsEnabled",
+    "PlaybackSpeed",
+    "Played",
+    "Playing",
+    "Resume",
+    "Resumed",
+    "RollOffMaxDistance",
+    "RollOffMinDistance",
+    "RollOffMode",
+    "SoundGroup",
+    "SoundId",
+    "Stop",
+    "Stopped",
+    "TimeLength",
+    "TimePosition",
+    "Volume",
+    "isPlaying",
+    "pause",
+    "play",
+    "stop"
+   ],
+   "parent": "Instance",
+   "ranges": {
+    "PlaybackSpeed": [
+     0,
+     20
+    ],
+    "Volume": [
+     0,
+     10
+    ]
+   }
+  },
+  "SoundGroup": {
+   "deprecated": [],
+   "members": [
+    "Volume"
+   ],
+   "parent": "Instance",
+   "ranges": {
+    "Volume": [
+     0,
+     10
+    ]
+   }
+  },
+  "SpotLight": {
+   "deprecated": [],
+   "members": [
+    "Angle",
+    "Face",
+    "Range"
+   ],
+   "parent": "Light",
+   "ranges": {
+    "Angle": [
+     0,
+     180
+    ],
+    "Range": [
+     0,
+     120
+    ]
+   }
+  },
+  "SurfaceGui": {
+   "deprecated": [],
+   "members": [
+    "AlwaysOnTop",
+    "Brightness",
+    "CanvasSize",
+    "ClipsDescendants",
+    "LightInfluence",
+    "MaxDistance",
+    "PixelsPerStud",
+    "SizingMode",
+    "ToolPunchThroughDistance",
+    "ZOffset"
+   ],
+   "parent": "SurfaceGuiBase",
+   "ranges": {
+    "Brightness": [
+     0,
+     10
+    ],
+    "LightInfluence": [
+     0,
+     1
+    ],
+    "MaxDistance": [
+     0,
+     1000
+    ],
+    "PixelsPerStud": [
+     10,
+     200
+    ],
+    "ToolPunchThroughDistance": [
+     0,
+     1000
+    ]
+   }
+  },
+  "SurfaceGuiBase": {
+   "deprecated": [],
+   "members": [
+    "Active",
+    "Adornee",
+    "Face"
+   ],
+   "parent": "LayerCollector",
+   "ranges": {}
+  },
+  "SurfaceLight": {
+   "deprecated": [],
+   "members": [
+    "Angle",
+    "Face",
+    "Range"
+   ],
+   "parent": "Light",
+   "ranges": {
+    "Angle": [
+     0,
+     180
+    ],
+    "Range": [
+     0,
+     120
+    ]
+   }
+  },
+  "TextBox": {
+   "deprecated": [
+    "TextColor"
+   ],
+   "members": [
+    "CaptureFocus",
+    "ClearTextOnFocus",
+    "ContentText",
+    "CursorPosition",
+    "FocusLost",
+    "Focused",
+    "Font",
+    "FontFace",
+    "FontSize",
+    "IsFocused",
+    "LineHeight",
+    "MaxVisibleGraphemes",
+    "MultiLine",
+    "OpenTypeFeatures",
+    "OpenTypeFeaturesError",
+    "PlaceholderColor3",
+    "PlaceholderText",
+    "ReleaseFocus",
+    "ReturnPressedFromOnScreenKeyboard",
+    "RichText",
+    "SelectionStart",
+    "ShowNativeInput",
+    "Text",
+    "TextBounds",
+    "TextColor",
+    "TextColor3",
+    "TextDirection",
+    "TextEditable",
+    "TextFits",
+    "TextScaled",
+    "TextSize",
+    "TextStrokeColor3",
+    "TextStrokeTransparency",
+    "TextTransparency",
+    "TextTruncate",
+    "TextWrap",
+    "TextWrapped",
+    "TextXAlignment",
+    "TextYAlignment"
+   ],
+   "parent": "GuiObject",
+   "ranges": {
+    "LineHeight": [
+     0,
+     3
+    ],
+    "TextSize": [
+     1,
+     100
+    ],
+    "TextStrokeTransparency": [
+     0,
+     1
+    ],
+    "TextTransparency": [
+     0,
+     1
+    ]
+   }
+  },
+  "TextButton": {
+   "deprecated": [
+    "TextColor"
+   ],
+   "members": [
+    "ContentText",
+    "Font",
+    "FontFace",
+    "FontSize",
+    "LineHeight",
+    "LocalizedText",
+    "MaxVisibleGraphemes",
+    "OpenTypeFeatures",
+    "OpenTypeFeaturesError",
+    "RichText",
+    "Text",
+    "TextBounds",
+    "TextColor",
+    "TextColor3",
+    "TextDirection",
+    "TextFits",
+    "TextScaled",
+    "TextSize",
+    "TextStrokeColor3",
+    "TextStrokeTransparency",
+    "TextTransparency",
+    "TextTruncate",
+    "TextWrap",
+    "TextWrapped",
+    "TextXAlignment",
+    "TextYAlignment"
+   ],
+   "parent": "GuiButton",
+   "ranges": {
+    "LineHeight": [
+     0,
+     3
+    ],
+    "TextSize": [
+     1,
+     100
+    ],
+    "TextStrokeTransparency": [
+     0,
+     1
+    ],
+    "TextTransparency": [
+     0,
+     1
+    ]
+   }
+  },
+  "TextLabel": {
+   "deprecated": [
+    "TextColor"
+   ],
+   "members": [
+    "ContentText",
+    "Font",
+    "FontFace",
+    "FontSize",
+    "LineHeight",
+    "LocalizedText",
+    "MaxVisibleGraphemes",
+    "OpenTypeFeatures",
+    "OpenTypeFeaturesError",
+    "RichText",
+    "Text",
+    "TextBounds",
+    "TextColor",
+    "TextColor3",
+    "TextDirection",
+    "TextFits",
+    "TextScaled",
+    "TextSize",
+    "TextStrokeColor3",
+    "TextStrokeTransparency",
+    "TextTransparency",
+    "TextTruncate",
+    "TextWrap",
+    "TextWrapped",
+    "TextXAlignment",
+    "TextYAlignment"
+   ],
+   "parent": "GuiLabel",
+   "ranges": {
+    "LineHeight": [
+     0,
+     3
+    ],
+    "TextSize": [
+     1,
+     100
+    ],
+    "TextStrokeTransparency": [
+     0,
+     1
+    ],
+    "TextTransparency": [
+     0,
+     1
+    ]
+   }
+  },
+  "Trail": {
+   "deprecated": [],
+   "members": [
+    "Attachment0",
+    "Attachment1",
+    "Brightness",
+    "Clear",
+    "Color",
+    "Enabled",
+    "FaceCamera",
+    "Lifetime",
+    "LightEmission",
+    "LightInfluence",
+    "LocalTransparencyModifier",
+    "MaxLength",
+    "MinLength",
+    "Texture",
+    "TextureContent",
+    "TextureLength",
+    "TextureMode",
+    "Transparency",
+    "WidthScale"
+   ],
+   "parent": "Instance",
+   "ranges": {
+    "Brightness": [
+     0,
+     10
+    ],
+    "Lifetime": [
+     0,
+     20
+    ],
+    "LightEmission": [
+     0,
+     1
+    ],
+    "LightInfluence": [
+     0,
+     1
+    ],
+    "MinLength": [
+     0,
+     1
+    ],
+    "TextureLength": [
+     0,
+     5
+    ],
+    "ZOffset": [
+     -1,
+     1
+    ]
+   }
+  },
+  "UIAspectRatioConstraint": {
+   "deprecated": [],
+   "members": [
+    "AspectRatio",
+    "AspectType",
+    "DominantAxis"
+   ],
+   "parent": "UIConstraint",
+   "ranges": {
+    "AspectRatio": [
+     0,
+     10
+    ]
+   }
+  },
+  "UIBase": {
+   "deprecated": [],
+   "members": [],
+   "parent": "Instance",
+   "ranges": {}
+  },
+  "UIComponent": {
+   "deprecated": [],
+   "members": [],
+   "parent": "UIBase",
+   "ranges": {}
+  },
+  "UIConstraint": {
+   "deprecated": [],
+   "members": [],
+   "parent": "UIComponent",
+   "ranges": {}
+  },
+  "UICorner": {
+   "deprecated": [],
+   "members": [
+    "BottomLeftRadius",
+    "BottomRightRadius",
+    "CornerRadius",
+    "TopLeftRadius",
+    "TopRightRadius"
+   ],
+   "parent": "UIComponent",
+   "ranges": {}
+  },
+  "UIFlexItem": {
+   "deprecated": [],
+   "members": [
+    "FlexMode",
+    "GrowRatio",
+    "ItemLineAlignment",
+    "ShrinkRatio"
+   ],
+   "parent": "UIComponent",
+   "ranges": {}
+  },
+  "UIGradient": {
+   "deprecated": [],
+   "members": [
+    "Color",
+    "Enabled",
+    "Offset",
+    "Rotation",
+    "Scale",
+    "TileMode",
+    "Transparency",
+    "Type"
+   ],
+   "parent": "UIComponent",
+   "ranges": {
+    "Rotation": [
+     -180,
+     180
+    ],
+    "Scale": [
+     0,
+     10
+    ],
+    "Transparency": [
+     0,
+     1
+    ]
+   }
+  },
+  "UIGridLayout": {
+   "deprecated": [],
+   "members": [
+    "AbsoluteCellCount",
+    "AbsoluteCellSize",
+    "CellPadding",
+    "CellSize",
+    "FillDirectionMaxCells",
+    "StartCorner"
+   ],
+   "parent": "UIGridStyleLayout",
+   "ranges": {
+    "FillDirectionMaxCells": [
+     0,
+     20
+    ]
+   }
+  },
+  "UIGridStyleLayout": {
+   "deprecated": [
+    "SetCustomSortFunction"
+   ],
+   "members": [
+    "AbsoluteContentSize",
+    "ApplyLayout",
+    "FillDirection",
+    "HorizontalAlignment",
+    "SetCustomSortFunction",
+    "SortOrder",
+    "VerticalAlignment"
+   ],
+   "parent": "UILayout",
+   "ranges": {}
+  },
+  "UILayout": {
+   "deprecated": [],
+   "members": [],
+   "parent": "UIComponent",
+   "ranges": {}
+  },
+  "UIListLayout": {
+   "deprecated": [],
+   "members": [
+    "HorizontalFlex",
+    "ItemLineAlignment",
+    "Padding",
+    "VerticalFlex",
+    "Wraps"
+   ],
+   "parent": "UIGridStyleLayout",
+   "ranges": {}
+  },
+  "UIPadding": {
+   "deprecated": [],
+   "members": [
+    "PaddingBottom",
+    "PaddingLeft",
+    "PaddingRight",
+    "PaddingTop"
+   ],
+   "parent": "UIComponent",
+   "ranges": {}
+  },
+  "UIScale": {
+   "deprecated": [],
+   "members": [
+    "Scale"
+   ],
+   "parent": "UIComponent",
+   "ranges": {
+    "Scale": [
+     0.1,
+     10
+    ]
+   }
+  },
+  "UISizeConstraint": {
+   "deprecated": [],
+   "members": [
+    "MaxSize",
+    "MinSize"
+   ],
+   "parent": "UIConstraint",
+   "ranges": {}
+  },
+  "UIStroke": {
+   "deprecated": [],
+   "members": [
+    "ApplyStrokeMode",
+    "BorderOffset",
+    "BorderStrokePosition",
+    "Color",
+    "Enabled",
+    "LineJoinMode",
+    "StrokeSizingMode",
+    "Thickness",
+    "Transparency",
+    "ZIndex"
+   ],
+   "parent": "UIComponent",
+   "ranges": {
+    "Thickness": [
+     0,
+     25
+    ],
+    "Transparency": [
+     0,
+     1
+    ]
+   }
+  },
+  "UITextSizeConstraint": {
+   "deprecated": [],
+   "members": [
+    "MaxTextSize",
+    "MinTextSize"
+   ],
+   "parent": "UIConstraint",
+   "ranges": {
+    "MaxTextSize": [
+     1,
+     100
+    ],
+    "MinTextSize": [
+     1,
+     100
+    ]
+   }
+  },
+  "ViewportFrame": {
+   "deprecated": [],
+   "members": [
+    "Ambient",
+    "CurrentCamera",
+    "ImageColor3",
+    "ImageTransparency",
+    "LightColor",
+    "LightDirection"
+   ],
+   "parent": "GuiObject",
+   "ranges": {
+    "ImageTransparency": [
+     0,
+     1
+    ]
+   }
+  }
+ },
+ "source": "Generated by mcp/roblox-forge/studio_catalog.py from a Roblox Studio install: member names (content/api_docs), editor ranges and deprecations (ReflectionMetadata.xml), built-in file paths (content/). Names, numbers, and paths only.",
+ "studio_version": "0.748.0.7481526"
+}

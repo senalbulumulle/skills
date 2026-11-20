@@ -316,6 +316,28 @@ class PostChecks(HookCase):
         missing = json.dumps({"name": "G", "tree": {"$className": "DataModel", "S": {"$path": "src/nowhere"}}}, indent=1)
         self.assertIn("'src/nowhere' does not exist", self.post("default.project.json", missing))
 
+    def test_roblox_effect_value_types(self):
+        make_roblox(self.root)
+        text = self.post("src/server/Fx.server.luau", "\n".join([
+            'local fx = Instance.new("ParticleEmitter")',
+            "fx.Color = Color3.new(1, 0, 0)",
+            "fx.Lifetime = 2 -- seconds",
+            "fx.Rate = 20",
+            "fx.Size = NumberSequence.new(1)",
+            'local trail: Trail = Instance.new("Trail")',
+            "trail.Transparency = 0.5",
+            "trail.Lifetime = 0.3",
+            'print("fx.Color = Color3.new(1, 1, 1)") -- fx.Speed = 3',
+            'local fx = Instance.new("Sound")',
+            "fx.Color = 1",
+            'local beam = Instance.new("Beam")',
+            "local function tint(beam: Frame) beam.Color = Color3.new() end",  # a parameter, not the Beam
+        ]) + "\n")
+        self.assertIn("Fx.server.luau:2: error: ParticleEmitter.Color takes a ColorSequence, not a Color3", text)
+        self.assertIn("Fx.server.luau:3: error: ParticleEmitter.Lifetime takes a NumberRange, not a number", text)
+        self.assertIn("Fx.server.luau:7: error: Trail.Transparency takes a NumberSequence, not a number", text)
+        self.assertEqual(text.count(": error:"), 3, text)
+
     def test_non_engine_files_are_ignored(self):
         self.assertEqual(self.post("notes.md", "wait(1)"), "")
 
@@ -367,6 +389,20 @@ class CreativeBrief(HookCase):
         self.assertIn("map_remotes", self.context(self.prompt("add a new level with moving platforms")))
         self.assertIsNone(self.prompt("rename the remote events"))
 
+    def test_roblox_polish_guidance(self):
+        self.assertIsNone(self.prompt("add particles to the coin pickup"))  # no Roblox context
+        out = self.context(self.prompt("make the Roblox shop UI feel juicier"))
+        self.assertIn("Roblox polish", out)
+        self.assertNotIn("Creative brief", out)
+        make_roblox(self.root)
+        out = self.context(self.prompt("add sparkles and a sound to the coin pickup"))
+        self.assertIn("vfx_recipe", out)
+        self.assertIn("search_asset", out)
+        both = self.context(self.prompt("build a tycoon with satisfying button effects"))
+        self.assertIn("Creative brief", both)
+        self.assertIn("Roblox polish", both)
+        self.assertIsNone(self.prompt("why does the UI flicker?"))  # no creative verb
+
     def test_level_words_count_only_in_a_game_project(self):
         self.assertIsNone(self.prompt("add a new level with moving platforms"))
         make_godot(self.root)
@@ -414,6 +450,15 @@ class UnfinishedWork(HookCase):
         write(self.root, "tests/test_text.py", 'SAMPLE = "lor' + 'em ipsum"\n')
         write(self.root, "src/game.py", "# TO" + "DO: tune the jump arc after playtesting\nraise NotImplementedError\n")
         self.assertIsNone(self.stop())
+
+    def test_value_types_match_roblox_forge(self):
+        sys.path.insert(0, str(HOOKS.parents[2] / "mcp" / "roblox-forge"))
+        try:
+            import forge
+            import game_hooks
+        finally:
+            sys.path.pop(0)
+        self.assertEqual(game_hooks.VALUE_TYPES, forge.VALUE_TYPES)
 
     def test_rules_match_the_creative_director_server(self):
         sys.path.insert(0, str(HOOKS.parents[2] / "mcp" / "creative-director"))
