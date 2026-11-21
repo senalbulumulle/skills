@@ -125,7 +125,7 @@ def main(argv: list[str]) -> int:
         t.write_text(text, encoding="utf-8")
         print(f"Installed {t}")
     print(f"Profile: {note}, reasoning {effort or 'default'}. Start it with: codex -p {PROFILE_NAME}")
-    print("Roles: game-designer, game-critic. Ask for them by name in any session.")
+    print(f"Roles: {', '.join(role.stem for role in ROLES)}. Ask for them by name in any session.")
     return 0
 
 
