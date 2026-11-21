@@ -1,9 +1,9 @@
-// Tests for the pure helpers exported by mcp/motion-forge/components. Run: node --test tools/
+// Tests for the pure helpers exported by mcp/web-dev/motion-forge/components. Run: node --test tools/
 // Importing a component in Node defines nothing: the custom element registers only where customElements exists.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-const dir = "../mcp/motion-forge/components";
+const dir = "../mcp/web-dev/motion-forge/components";
 const Shader = await import(`${dir}/shader-gradient.js`);
 const Tilt = await import(`${dir}/tilt-card.js`);
 const Parallax = await import(`${dir}/parallax.js`);

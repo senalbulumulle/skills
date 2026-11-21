@@ -18,9 +18,7 @@ jobs:
           # Dependencies are declared in inline script headers and in this workflow's --with flags.
           cache-dependency-glob: |
             tools/skills.py
-            mcp/roblox-forge/server.py
-            mcp/creative-director/server.py
-            mcp/motion-forge/server.py
+            mcp/web-dev/motion-forge/server.py
             .github/workflows/validate.yml
       - uses: actions/setup-node@v7
         with:
@@ -41,13 +39,13 @@ jobs:
       - name: Type-check pure Luau modules
         run: >
           luau-analyze --mode=strict
-          skills/roblox-scripting/assets/rojo-template/src/server/RemoteGuard.luau
-          skills/roblox-scripting/assets/rojo-template/src/server/PlayerData.luau
-          skills/roblox-scripting/assets/rojo-template/src/shared/Config.luau
-          skills/roblox-scripting/assets/rojo-template/src/shared/Juice.luau
-          skills/roblox-gameplay/assets/RoundSystem.luau
-          skills/roblox-narrative/assets/DialogueRunner.luau
-          skills/roblox-narrative/assets/example/build/Dialogue.luau
+          skills/roblox/roblox-scripting/assets/rojo-template/src/server/RemoteGuard.luau
+          skills/roblox/roblox-scripting/assets/rojo-template/src/server/PlayerData.luau
+          skills/roblox/roblox-scripting/assets/rojo-template/src/shared/Config.luau
+          skills/roblox/roblox-scripting/assets/rojo-template/src/shared/Juice.luau
+          skills/roblox/roblox-gameplay/assets/RoundSystem.luau
+          skills/roblox/roblox-narrative/assets/DialogueRunner.luau
+          skills/roblox/roblox-narrative/assets/example/build/Dialogue.luau
       - name: Test Luau modules
         run: luau tools/luau/test_roblox_modules.luau
       - name: Smoke-test the MCP servers over stdio

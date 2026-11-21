@@ -39,7 +39,7 @@ Use absolute paths in tool calls. Replace `/path/to/skills` below with this repo
 ## Claude Code
 
 ```sh
-claude mcp add --scope user motion-forge -- uv run --quiet --script /path/to/skills/mcp/motion-forge/server.py
+claude mcp add --scope user motion-forge -- uv run --quiet --script /path/to/skills/mcp/web-dev/motion-forge/server.py
 ```
 
 ## Codex
@@ -50,7 +50,7 @@ scripts/codex/install-codex-mcp.sh   # registers this repo's servers and downloa
 
 Or by hand:
 ```sh
-codex mcp add motion-forge -- uv run --quiet --script /path/to/skills/mcp/motion-forge/server.py
+codex mcp add motion-forge -- uv run --quiet --script /path/to/skills/mcp/web-dev/motion-forge/server.py
 ```
 Check with `codex mcp list`, or `/mcp` inside a session.
 
@@ -63,7 +63,7 @@ Add the server to `~/.gemini/settings.json` (all projects) or `.gemini/settings.
   "mcpServers": {
     "motion-forge": {
       "command": "uv",
-      "args": ["run", "--quiet", "--script", "/path/to/skills/mcp/motion-forge/server.py"],
+      "args": ["run", "--quiet", "--script", "/path/to/skills/mcp/web-dev/motion-forge/server.py"],
       "timeout": 60000
     }
   }

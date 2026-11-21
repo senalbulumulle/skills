@@ -3,7 +3,7 @@
 #   skills   -> ~/.agents/skills/                                  (scripts/codex/install-codex-skills.sh)
 #   hooks    -> $CODEX_HOME/hooks.json, engine-aware game hooks    (scripts/codex/install-codex-hooks.sh)
 #   profile  -> $CODEX_HOME/game.config.toml and agents/ roles     (scripts/codex/install-codex-profile.sh)
-#   mcp      -> creative-director and roblox-forge MCP servers       (scripts/codex/install-codex-mcp.sh)
+#   mcp      -> MCP servers in mcp/<category>/<name>/   (scripts/codex/install-codex-mcp.sh)
 #
 #   scripts/codex/install-codex.sh                      all four
 #   scripts/codex/install-codex.sh --only skills,hooks  just the ones listed

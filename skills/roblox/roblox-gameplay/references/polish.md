@@ -42,5 +42,5 @@ Keep each response under 0.3 seconds so it never delays the next input, and size
 
 ## Check
 
-- roblox-forge: `vfx_recipe` gives checked starting code for common effects; `audit_polish` and `audit_feel` find code that errors, plays nothing, or gives no feedback.
+- Code: every sequence property gets a `ColorSequence` or `NumberSequence`, every range a `NumberRange`, and every value sits in the range [effects-catalog.md](effects-catalog.md) lists.
 - Studio: play-test, watch each moment on a phone-sized device in the emulator, and check the Output window for errors.

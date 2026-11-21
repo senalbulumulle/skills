@@ -5,15 +5,18 @@
 # ///
 """Validate, scaffold, build, and install skills for every supported agent platform.
 
-Shared skills live in skills/<name>/. A platform folder, platforms/<platform>/skills/<name>/,
-either overrides a shared skill (files replace or add to it; frontmatter.yaml merges into its
-frontmatter) or, when no shared skill has that name, defines a skill for that platform only.
+Shared skills live in skills/<category>/<name>/. A platform folder,
+platforms/<platform>/skills/<category>/<name>/, either overrides a shared skill (files replace or add
+to it; frontmatter.yaml merges into its frontmatter) or, when no shared skill has that name, defines a
+skill for that platform only. Each category folder has a README.md that says what it is for. Skill
+names are unique across categories, because every platform installs skills into one flat folder.
 
 Usage:
-  tools/skills.py validate [--strict] [-p PLATFORM] [SKILL_DIR ...]
-  tools/skills.py new NAME [-p PLATFORM]
-  tools/skills.py install   [-p PLATFORM ...] [--project DIR] [NAME ...]
-  tools/skills.py uninstall [-p PLATFORM ...] [--project DIR] [NAME ...]
+  tools/skills.py list      [-c CATEGORY ...]
+  tools/skills.py validate  [--strict] [-p PLATFORM] [SKILL_DIR ...]
+  tools/skills.py new NAME -c CATEGORY [-p PLATFORM]
+  tools/skills.py install   [-p PLATFORM ...] [-c CATEGORY ...] [--project DIR] [NAME ...]
+  tools/skills.py uninstall [-p PLATFORM ...] [-c CATEGORY ...] [--project DIR] [NAME ...]
 """
 from __future__ import annotations
 
@@ -33,6 +36,7 @@ PLATFORMS_DIR = REPO / "platforms"
 DIST_DIR = REPO / "dist"
 TEMPLATE = REPO / "template" / "SKILL.md"
 FRONTMATTER_PATCH = "frontmatter.yaml"
+CATEGORY_README = "README.md"
 
 # Agent Skills spec fields: understood by every platform below and by claude.ai uploads.
 SPEC_KEYS = {"name", "description", "license", "compatibility", "metadata", "allowed-tools"}
@@ -126,7 +130,7 @@ def check_frontmatter(r: Report, data: dict, platform: str | None) -> None:
         owners = [p for p, cfg in PLATFORMS.items() if key in cfg["keys"]]
         if owners:
             r.warn(f"frontmatter: '{key}' only works in {', '.join(owners)}; "
-                   f"set it in platforms/<platform>/skills/{r.skill.name}/{FRONTMATTER_PATCH}")
+                   f"set it in platforms/<platform>/skills/{r.skill.parent.name}/{r.skill.name}/{FRONTMATTER_PATCH}")
         else:
             r.error(f"frontmatter: unknown key '{key}'")
 
@@ -292,23 +296,53 @@ def validate_skill(skill: Path, platform: str | None = None) -> Report:
     return r
 
 
-def discover(skills_dir: Path | None = None) -> list[Path]:
-    skills_dir = skills_dir or SKILLS_DIR
-    if not skills_dir.is_dir():
+def subdirs(folder: Path) -> list[Path]:
+    if not folder.is_dir():
         return []
-    return sorted(p for p in skills_dir.iterdir() if p.is_dir() and not p.name.startswith("."))
+    return sorted(p for p in folder.iterdir() if p.is_dir() and not p.name.startswith(".") and p.name != "__pycache__")
 
 
-def overlay_dir(platform: str, name: str) -> Path:
-    return PLATFORMS_DIR / platform / "skills" / name
+def categories(root: Path | None = None) -> list[Path]:
+    """Category folders under a skills root. A folder holding SKILL.md is a misplaced skill, not a category."""
+    return [c for c in subdirs(root or SKILLS_DIR) if not (c / "SKILL.md").exists()]
+
+
+def discover(root: Path | None = None) -> list[Path]:
+    """Every skill folder under a skills root (skills/ or platforms/<platform>/skills/)."""
+    return [s for c in categories(root) for s in subdirs(c)]
+
+
+def index(root: Path | None = None) -> dict[str, Path]:
+    """Skill name -> folder. On duplicate names the first wins; validate_all reports the clash."""
+    found: dict[str, Path] = {}
+    for s in discover(root):
+        found.setdefault(s.name, s)
+    return found
+
+
+def category_of(skill: Path) -> str:
+    return skill.parent.name
+
+
+def overlay_root(platform: str) -> Path:
+    return PLATFORMS_DIR / platform / "skills"
+
+
+def overlay_dir(platform: str, name: str) -> Path | None:
+    return index(overlay_root(platform)).get(name)
 
 
 def overlay_names(platform: str) -> list[str]:
-    return [p.name for p in discover(PLATFORMS_DIR / platform / "skills")]
+    return sorted(index(overlay_root(platform)))
+
+
+def skill_category(platform: str | None, name: str) -> str | None:
+    src = index().get(name) or (overlay_dir(platform, name) if platform else None)
+    return category_of(src) if src else None
 
 
 def platform_skill_names(platform: str) -> list[str]:
-    return sorted({p.name for p in discover()} | set(overlay_names(platform)))
+    return sorted(set(index()) | set(overlay_names(platform)))
 
 
 class BuildError(Exception):
@@ -344,20 +378,25 @@ def apply_frontmatter_patch(skill_md: Path, patch_file: Path) -> None:
 
 def build_skill(platform: str, name: str, dest_root: Path) -> Path:
     """Write the platform's variant of a skill to dest_root/name: the shared skill plus its overrides."""
-    shared = SKILLS_DIR / name
+    shared = index().get(name)
     overlay = overlay_dir(platform, name)
+    if overlay is None:
+        raise BuildError(f"platforms/{platform}/skills has no override for '{name}'")
+    if shared is not None and category_of(shared) != category_of(overlay):
+        raise BuildError(f"override is in category '{category_of(overlay)}' but the shared skill is in "
+                         f"'{category_of(shared)}'; move it to platforms/{platform}/skills/{category_of(shared)}/{name}")
     patch = overlay / FRONTMATTER_PATCH
     if patch.is_file() and (overlay / "SKILL.md").is_file():
         raise BuildError(f"override has both SKILL.md and {FRONTMATTER_PATCH}; keep one")
-    if patch.is_file() and not shared.is_dir():
-        raise BuildError(f"{FRONTMATTER_PATCH} needs a shared skill to merge into, but skills/{name} does not exist")
+    if patch.is_file() and shared is None:
+        raise BuildError(f"{FRONTMATTER_PATCH} needs a shared skill to merge into, but skills/*/{name} does not exist")
 
     dest = dest_root / name
     if dest.is_symlink():
         dest.unlink()
     elif dest.exists():
         shutil.rmtree(dest)
-    if shared.is_dir():
+    if shared is not None:
         shutil.copytree(shared, dest, symlinks=True)
     else:
         dest.mkdir(parents=True)
@@ -376,20 +415,54 @@ def build_skill(platform: str, name: str, dest_root: Path) -> Path:
     return dest
 
 
+def check_layout(root: Path, label: str) -> list[tuple[str, Report]]:
+    """Category READMEs, skills placed outside a category, and names used twice."""
+    reports = []
+    for folder in subdirs(root):
+        if (folder / "SKILL.md").exists():
+            r = Report(folder)
+            r.error(f"{label}/{folder.name} is a skill outside any category; move it to {label}/<category>/{folder.name}")
+            reports.append((f"{label}/{folder.name}", r))
+    seen: dict[str, Path] = {}
+    for c in categories(root):
+        r = Report(c)
+        readme = c / CATEGORY_README
+        if root == SKILLS_DIR:
+            if not NAME_RE.match(c.name):
+                r.error(f"category name '{c.name}' must be lowercase a-z, 0-9 and single hyphens")
+            if not readme.is_file():
+                r.error(f"missing {CATEGORY_README} saying what the category is for")
+            elif PLACEHOLDER_RE.search(readme.read_text(encoding="utf-8")):
+                r.error(f"{CATEGORY_README} still contains a TODO placeholder")
+            if not subdirs(c) and not any(subdirs(overlay_root(p) / c.name) for p in PLATFORMS):
+                r.warn("category has no skills")
+        elif not (SKILLS_DIR / c.name / CATEGORY_README).is_file():
+            r.error(f"category '{c.name}' is not defined; add skills/{c.name}/{CATEGORY_README}")
+        for s in subdirs(c):
+            if s.name in seen:
+                r.error(f"skill name '{s.name}' is also used by {seen[s.name].relative_to(root)}; names must be unique")
+            seen.setdefault(s.name, s)
+        if r.errors or r.warnings:
+            reports.append((f"{label}/{c.name}", r))
+    return reports
+
+
 def validate_all(tmp: Path) -> list[tuple[str, Report]]:
     reports = [(s.name, validate_skill(s)) for s in discover()]
-    for folder in discover(PLATFORMS_DIR):
+    reports += check_layout(SKILLS_DIR, "skills")
+    for folder in subdirs(PLATFORMS_DIR):
         if folder.name not in PLATFORMS:
             r = Report(folder)
             r.error(f"platforms/{folder.name} is not a supported platform ({', '.join(PLATFORMS)})")
             reports.append((folder.name, r))
     for platform in PLATFORMS:
+        reports += check_layout(overlay_root(platform), f"platforms/{platform}/skills")
         for name in overlay_names(platform):
             label = f"{platform}/{name}"
             try:
                 built = build_skill(platform, name, tmp / platform)
             except BuildError as e:
-                r = Report(overlay_dir(platform, name))
+                r = Report(overlay_dir(platform, name) or overlay_root(platform))
                 r.error(str(e))
                 reports.append((label, r))
                 continue
@@ -432,14 +505,29 @@ def cmd_new(args: argparse.Namespace) -> int:
     if not NAME_RE.match(name) or len(name) > MAX_NAME or name in RESERVED_NAMES:
         print(f"error: invalid skill name '{name}'", file=sys.stderr)
         return 1
-    if args.platform and (SKILLS_DIR / name).exists():
-        print(f"error: skills/{name} is shared; to change it for {args.platform}, add files to "
-              f"platforms/{args.platform}/skills/{name}/ (see AGENTS.md)", file=sys.stderr)
+    category = args.category
+    if not NAME_RE.match(category):
+        print(f"error: invalid category name '{category}'", file=sys.stderr)
         return 1
-    dest = overlay_dir(args.platform, name) if args.platform else SKILLS_DIR / name
-    if dest.exists():
-        print(f"error: {dest.relative_to(REPO)} already exists", file=sys.stderr)
+    shared = index().get(name)
+    if shared is not None:
+        if args.platform:
+            print(f"error: {shared.relative_to(REPO)} is shared; to change it for {args.platform}, add files to "
+                  f"platforms/{args.platform}/skills/{category_of(shared)}/{name}/ (see AGENTS.md)", file=sys.stderr)
+        else:
+            print(f"error: {shared.relative_to(REPO)} already exists", file=sys.stderr)
         return 1
+    taken = next((overlay_dir(p, name) for p in PLATFORMS if overlay_dir(p, name)), None)
+    if taken is not None:
+        print(f"error: {taken.relative_to(REPO)} already uses that name", file=sys.stderr)
+        return 1
+    readme = SKILLS_DIR / category / CATEGORY_README
+    if not readme.is_file():
+        readme.parent.mkdir(parents=True, exist_ok=True)
+        readme.write_text(f"# {category}\n\nTODO: one sentence on what this category is for and who uses it.\n",
+                          encoding="utf-8")
+        print(f"Created new category {readme.relative_to(REPO)}; replace its TODO")
+    dest = (overlay_root(args.platform) if args.platform else SKILLS_DIR) / category / name
     dest.mkdir(parents=True)
     (dest / "SKILL.md").write_text(TEMPLATE.read_text(encoding="utf-8").replace("{{name}}", name), encoding="utf-8")
     print(f"Created {dest.relative_to(REPO)}/SKILL.md; replace every TODO, then run: tools/skills.py validate")
@@ -464,12 +552,32 @@ def is_ours(link: Path) -> bool:
     return any(root.resolve() in target.parents for root in (SKILLS_DIR, DIST_DIR))
 
 
+def known_categories() -> set[str]:
+    return {c.name for c in categories()} | {c.name for p in PLATFORMS for c in categories(overlay_root(p))}
+
+
+def check_categories(args: argparse.Namespace) -> bool:
+    unknown = [c for c in (args.category or []) if c not in known_categories()]
+    if unknown:
+        print(f"error: no such category: {', '.join(unknown)} (have: {', '.join(sorted(known_categories()))})",
+              file=sys.stderr)
+        return False
+    return True
+
+
+def in_categories(platform: str, name: str, args: argparse.Namespace) -> bool:
+    return not args.category or skill_category(platform, name) in args.category
+
+
 def cmd_install(args: argparse.Namespace) -> int:
+    if not check_categories(args):
+        return 1
     platforms = selected_platforms(args)
-    available = {p: platform_skill_names(p) for p in platforms}
+    available = {p: [n for n in platform_skill_names(p) if in_categories(p, n, args)] for p in platforms}
     unknown = [n for n in args.names if not any(n in names for names in available.values())]
     if unknown:
-        print(f"error: no such skill(s) for {', '.join(platforms)}: {', '.join(unknown)}", file=sys.stderr)
+        where = f" in {', '.join(args.category)}" if args.category else ""
+        print(f"error: no such skill(s) for {', '.join(platforms)}{where}: {', '.join(unknown)}", file=sys.stderr)
         return 1
 
     # Build and validate everything before touching any install folder.
@@ -481,12 +589,13 @@ def cmd_install(args: argparse.Namespace) -> int:
             if args.names and name not in args.names:
                 continue
             try:
-                src = build_skill(p, name, DIST_DIR / p) if name in overlay_names(p) else SKILLS_DIR / name
+                variant = name in overlay_names(p)
+                src = build_skill(p, name, DIST_DIR / p) if variant else index()[name]
             except BuildError as e:
                 failed.append(f"{p}/{name} ({e})")
                 continue
-            if validate_skill(src, p if src.parent != SKILLS_DIR else None).errors:
-                failed.append(f"{p}/{name}" if src.parent != SKILLS_DIR else name)
+            if validate_skill(src, p if variant else None).errors:
+                failed.append(f"{p}/{name}" if variant else name)
             sources[p][name] = src
     if failed:
         print(f"error: fix validation errors first: {', '.join(sorted(set(failed)))}", file=sys.stderr)
@@ -515,21 +624,65 @@ def cmd_install(args: argparse.Namespace) -> int:
 
 
 def cmd_uninstall(args: argparse.Namespace) -> int:
+    if not check_categories(args):
+        return 1
     for p in selected_platforms(args):
         target = target_dir(p, args)
         if not target.is_dir():
             continue
         links = [target / n for n in args.names] if args.names else sorted(target.iterdir())
         for link in links:
-            if is_ours(link):
+            if is_ours(link) and in_categories(p, link.name, args):
                 link.unlink()
                 print(f"removed  {link}")
+    return 0
+
+
+def first_sentence(text: str) -> str:
+    return re.split(r"(?<=[.!?])\s", text.strip(), maxsplit=1)[0]
+
+
+def read_description(skill: Path) -> str:
+    parts = split_frontmatter((skill / "SKILL.md").read_text(encoding="utf-8")) if (skill / "SKILL.md").is_file() else None
+    try:
+        data = yaml.safe_load(parts[0]) if parts else None
+    except yaml.YAMLError:
+        data = None
+    return str(data.get("description", "")) if isinstance(data, dict) else ""
+
+
+def cmd_list(args: argparse.Namespace) -> int:
+    if not check_categories(args):
+        return 1
+    rows: dict[str, list[tuple[str, str, str]]] = {}
+    for name in sorted(set(index()) | {n for p in PLATFORMS for n in overlay_names(p)}):
+        src = index().get(name)
+        only = [p for p in PLATFORMS if src is None and overlay_dir(p, name)]
+        src = src or overlay_dir(only[0], name)
+        if args.category and category_of(src) not in args.category:
+            continue
+        rows.setdefault(category_of(src), []).append((name, ", ".join(only), first_sentence(read_description(src))))
+    for category in sorted(rows):
+        readme = SKILLS_DIR / category / CATEGORY_README
+        about = ""
+        if readme.is_file():
+            body = [l for l in readme.read_text(encoding="utf-8").splitlines() if l.strip() and not l.startswith("#")]
+            about = f" — {first_sentence(body[0])}" if body else ""
+        print(f"{category}{about}")
+        for name, only, desc in rows[category]:
+            tag = f" [{only} only]" if only else ""
+            print(f"  {name}{tag}: {desc}")
+        print()
     return 0
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
+
+    p = sub.add_parser("list", help="show skills grouped by category")
+    p.add_argument("-c", "--category", action="append", help="repeatable; only these categories")
+    p.set_defaults(func=cmd_list)
 
     p = sub.add_parser("validate", help="check shared skills and every platform variant")
     p.add_argument("paths", nargs="*", help="standalone skill directories (default: skills/ and platforms/)")
@@ -539,6 +692,8 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("new", help="scaffold a skill from the template")
     p.add_argument("name")
+    p.add_argument("-c", "--category", required=True,
+                   help="folder under skills/ (for example game-dev); a new name creates the category")
     p.add_argument("-p", "--platform", choices=list(PLATFORMS), help="create a skill for this platform only")
     p.set_defaults(func=cmd_new)
 
@@ -547,6 +702,7 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("names", nargs="*", help="skill names (default: all)")
         p.add_argument("-p", "--platform", action="append", choices=[*PLATFORMS, "all"],
                        help=f"repeatable; default: {' '.join(DEFAULT_PLATFORMS)}")
+        p.add_argument("-c", "--category", action="append", help="repeatable; only skills in these categories")
         p.add_argument("--project", metavar="DIR", help="use the project folders under DIR instead of $HOME")
         p.set_defaults(func=func)
 

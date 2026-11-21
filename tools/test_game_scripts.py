@@ -31,7 +31,7 @@ def run(module, argv):
 
 
 class CheckLevelTests(unittest.TestCase):
-    m = load("game-level-design/scripts/check_level.py")
+    m = load("game-dev/game-level-design/scripts/check_level.py")
 
     def analyze(self, text, **kw):
         return self.m.analyze(self.m.parse(text), **kw)
@@ -75,7 +75,7 @@ class CheckLevelTests(unittest.TestCase):
 
 
 class BalanceTests(unittest.TestCase):
-    m = load("game-balance/scripts/balance.py")
+    m = load("game-dev/game-balance/scripts/balance.py")
 
     def json(self, argv):
         code, out = run(self.m, argv + ["--json"])
@@ -107,7 +107,7 @@ class BalanceTests(unittest.TestCase):
 
 
 class PaletteTests(unittest.TestCase):
-    m = load("game-art/scripts/palette_check.py")
+    m = load("game-dev/game-art/scripts/palette_check.py")
 
     def test_reference_contrasts(self):
         c = lambda a, b: self.m.contrast(self.m.luminance(a), self.m.luminance(b))
@@ -132,7 +132,7 @@ class PaletteTests(unittest.TestCase):
 
 
 class NewRobloxProjectTests(unittest.TestCase):
-    m = load("roblox-scripting/scripts/new_project.py")
+    m = load("roblox/roblox-scripting/scripts/new_project.py")
 
     def test_creates_project_with_name(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -166,10 +166,10 @@ class NewRobloxProjectTests(unittest.TestCase):
 
 @unittest.skipUnless(shutil.which("node"), "Node.js not installed")
 class CheckHtmlTests(unittest.TestCase):
-    m = load("game-prototype/scripts/check_html.py")
+    m = load("game-dev/game-prototype/scripts/check_html.py")
 
     def test_template_is_clean(self):
-        code, out = run(self.m, ["check_html.py", str(SKILLS / "game-prototype/assets/canvas-template.html")])
+        code, out = run(self.m, ["check_html.py", str(SKILLS / "game-dev/game-prototype/assets/canvas-template.html")])
         self.assertEqual(code, 0, out)
 
     def test_reports_syntax_error_line_and_missing_file(self):
@@ -185,8 +185,8 @@ class CheckHtmlTests(unittest.TestCase):
 
 
 class StoryTests(unittest.TestCase):
-    m = load("roblox-narrative/scripts/story.py")
-    EXAMPLE = SKILLS / "roblox-narrative" / "assets" / "example"
+    m = load("roblox/roblox-narrative/scripts/story.py")
+    EXAMPLE = SKILLS / "roblox" / "roblox-narrative" / "assets" / "example"
 
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
@@ -222,7 +222,7 @@ class StoryTests(unittest.TestCase):
         self.assertEqual((build / "localization.csv").read_text(), self.m.render_localization(story, ["es", "pt-br"]))
 
     def test_types_match_dialogue_runner(self):
-        runner = (SKILLS / "roblox-narrative" / "assets" / "DialogueRunner.luau").read_text()
+        runner = (SKILLS / "roblox" / "roblox-narrative" / "assets" / "DialogueRunner.luau").read_text()
         self.assertIn(self.m.LUAU_TYPES, runner)
 
     def test_findings(self):

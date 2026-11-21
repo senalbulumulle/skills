@@ -203,7 +203,9 @@ class CommandTests(SkillTestCase):
     def setUp(self):
         super().setUp()
         self.skills_dir = self.root / "repo" / "skills"
-        self.skills_dir.mkdir(parents=True)
+        self.cat = self.skills_dir / "cat"
+        self.cat.mkdir(parents=True)
+        (self.cat / "README.md").write_text("# cat\n\nDemo skills.\n")
         repo = self.skills_dir.parent
         self._orig = (skills.REPO, skills.SKILLS_DIR, skills.PLATFORMS_DIR, skills.DIST_DIR)
         skills.REPO, skills.SKILLS_DIR, skills.PLATFORMS_DIR, skills.DIST_DIR = (
@@ -221,33 +223,33 @@ class CommandTests(SkillTestCase):
         return path
 
     def shared(self, name="demo", extra=""):
-        self.write(f"skills/{name}/SKILL.md", f"---\nname: {name}\ndescription: Shared.\n{extra}---\n\nShared body.\n")
+        self.write(f"skills/cat/{name}/SKILL.md", f"---\nname: {name}\ndescription: Shared.\n{extra}---\n\nShared body.\n")
 
     def run_cli(self, *argv) -> int:
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             return skills.main(list(argv))
 
     def test_new_scaffold_fails_validation_until_filled(self):
-        self.assertEqual(self.run_cli("new", "demo"), 0)
-        r = skills.validate_skill(self.skills_dir / "demo")
+        self.assertEqual(self.run_cli("new", "demo", "-c", "cat"), 0)
+        r = skills.validate_skill(self.cat / "demo")
         self.assertTrue(any("TODO" in e for e in r.errors))
         self.assertFalse(any("name" in e for e in r.errors))
-        self.assertEqual(self.run_cli("new", "demo"), 1)
-        self.assertEqual(self.run_cli("new", "Bad_Name"), 1)
+        self.assertEqual(self.run_cli("new", "demo", "-c", "cat"), 1)
+        self.assertEqual(self.run_cli("new", "Bad_Name", "-c", "cat"), 1)
 
     def test_validate_exit_codes(self):
         self.assertEqual(self.run_cli("validate"), 0)
-        (self.skills_dir / "demo").mkdir()
-        (self.skills_dir / "demo" / "SKILL.md").write_text(
+        (self.cat / "demo").mkdir()
+        (self.cat / "demo" / "SKILL.md").write_text(
             "---\nname: demo\ndescription: x\ndisable-model-invocation: true\n---\n\nDo it.\n"
         )
         self.assertEqual(self.run_cli("validate"), 0)
         self.assertEqual(self.run_cli("validate", "--strict"), 1)
-        (self.skills_dir / "demo" / "SKILL.md").write_text("no frontmatter\n")
+        (self.cat / "demo" / "SKILL.md").write_text("no frontmatter\n")
         self.assertEqual(self.run_cli("validate"), 1)
 
     def test_install_and_uninstall(self):
-        skill = self.skills_dir / "demo"
+        skill = self.cat / "demo"
         skill.mkdir()
         (skill / "SKILL.md").write_text("---\nname: demo\ndescription: x\n---\n\nDo it.\n")
         self.assertEqual(self.run_cli("install", "--project", str(self.home)), 0)
@@ -261,7 +263,7 @@ class CommandTests(SkillTestCase):
         self.assertTrue((self.home / ".claude/skills/demo").is_symlink())
 
     def test_install_never_overwrites(self):
-        skill = self.skills_dir / "demo"
+        skill = self.cat / "demo"
         skill.mkdir()
         (skill / "SKILL.md").write_text("---\nname: demo\ndescription: x\n---\n\nDo it.\n")
         existing = self.home / ".claude/skills/demo"
@@ -273,8 +275,8 @@ class CommandTests(SkillTestCase):
         self.assertTrue(existing.is_dir())
 
     def test_install_refuses_invalid_or_unknown(self):
-        (self.skills_dir / "demo").mkdir()
-        (self.skills_dir / "demo" / "SKILL.md").write_text("bad\n")
+        (self.cat / "demo").mkdir()
+        (self.cat / "demo" / "SKILL.md").write_text("bad\n")
         self.assertEqual(self.run_cli("install", "--project", str(self.home)), 1)
         self.assertFalse((self.home / ".claude/skills/demo").exists())
         self.assertEqual(self.run_cli("install", "nope", "--project", str(self.home)), 1)
@@ -288,7 +290,7 @@ class CommandTests(SkillTestCase):
 
     def test_frontmatter_patch_merges_and_removes(self):
         self.shared(extra="license: MIT\n")
-        self.write("platforms/claude/skills/demo/frontmatter.yaml", "effort: high\nlicense:\n")
+        self.write("platforms/claude/skills/cat/demo/frontmatter.yaml", "effort: high\nlicense:\n")
         built, data, body = self.built_frontmatter("claude")
         self.assertEqual(data, {"name": "demo", "description": "Shared.", "effort": "high"})
         self.assertEqual(body, "\nShared body.\n")
@@ -297,9 +299,9 @@ class CommandTests(SkillTestCase):
 
     def test_override_files_replace_and_add(self):
         self.shared()
-        self.write("skills/demo/references/guide.md", "shared guide\n")
-        self.write("platforms/codex/skills/demo/SKILL.md", "---\nname: demo\ndescription: Codex.\n---\n\nG.\n")
-        self.write("platforms/codex/skills/demo/references/extra.md", "extra\n")
+        self.write("skills/cat/demo/references/guide.md", "shared guide\n")
+        self.write("platforms/codex/skills/cat/demo/SKILL.md", "---\nname: demo\ndescription: Codex.\n---\n\nG.\n")
+        self.write("platforms/codex/skills/cat/demo/references/extra.md", "extra\n")
         built, data, _ = self.built_frontmatter("codex")
         self.assertEqual(data["description"], "Codex.")
         self.assertEqual((built / "references/guide.md").read_text(), "shared guide\n")
@@ -307,10 +309,10 @@ class CommandTests(SkillTestCase):
         self.assertFalse((built / "frontmatter.yaml").exists())
 
     def test_override_errors(self):
-        self.write("platforms/codex/skills/ghost/frontmatter.yaml", "description: x\n")
+        self.write("platforms/codex/skills/cat/ghost/frontmatter.yaml", "description: x\n")
         self.shared()
-        self.write("platforms/claude/skills/demo/frontmatter.yaml", "model: inherit\n")
-        self.write("platforms/claude/skills/demo/SKILL.md", "---\nname: demo\ndescription: x\n---\n\nx\n")
+        self.write("platforms/claude/skills/cat/demo/frontmatter.yaml", "model: inherit\n")
+        self.write("platforms/claude/skills/cat/demo/SKILL.md", "---\nname: demo\ndescription: x\n---\n\nx\n")
         self.write("platforms/windsurf/skills/demo/SKILL.md", "x")
         with tempfile.TemporaryDirectory() as tmp:
             reports = dict(skills.validate_all(Path(tmp)))
@@ -321,29 +323,29 @@ class CommandTests(SkillTestCase):
 
     def test_validate_checks_variants_with_platform_keys(self):
         self.shared()
-        self.write("platforms/claude/skills/demo/frontmatter.yaml", "effort: high\n")
+        self.write("platforms/claude/skills/cat/demo/frontmatter.yaml", "effort: high\n")
         self.assertEqual(self.run_cli("validate", "--strict"), 0)
-        self.write("platforms/codex/skills/demo/frontmatter.yaml", "effort: high\n")
+        self.write("platforms/codex/skills/cat/demo/frontmatter.yaml", "effort: high\n")
         self.assertEqual(self.run_cli("validate", "--strict"), 1)
 
     def test_platform_only_skill(self):
         self.shared()
-        self.assertEqual(self.run_cli("new", "solo", "-p", "codex"), 0)
-        self.assertTrue((skills.PLATFORMS_DIR / "codex/skills/solo/SKILL.md").is_file())
-        self.assertEqual(self.run_cli("new", "demo", "-p", "codex"), 1)
+        self.assertEqual(self.run_cli("new", "solo", "-c", "cat", "-p", "codex"), 0)
+        self.assertTrue((skills.PLATFORMS_DIR / "codex/skills/cat/solo/SKILL.md").is_file())
+        self.assertEqual(self.run_cli("new", "demo", "-c", "cat", "-p", "codex"), 1)
         self.assertEqual(skills.platform_skill_names("codex"), ["demo", "solo"])
         self.assertEqual(skills.platform_skill_names("claude"), ["demo"])
 
     def test_install_links_variants_to_dist(self):
         self.shared()
-        self.write("platforms/codex/skills/solo/SKILL.md", "---\nname: solo\ndescription: x\n---\n\nx\n")
+        self.write("platforms/codex/skills/cat/solo/SKILL.md", "---\nname: solo\ndescription: x\n---\n\nx\n")
         self.assertEqual(self.run_cli("install", "-p", "codex", "-p", "claude", "--project", str(self.home)), 0)
         codex, claude = self.home / ".agents/skills", self.home / ".claude/skills"
-        self.assertEqual((codex / "demo").resolve(), (self.skills_dir / "demo").resolve())
+        self.assertEqual((codex / "demo").resolve(), (self.cat / "demo").resolve())
         self.assertEqual((codex / "solo").resolve(), (skills.DIST_DIR / "codex/solo").resolve())
         self.assertFalse((claude / "solo").exists())
         # Adding an override later re-points the existing link at the built variant.
-        self.write("platforms/codex/skills/demo/frontmatter.yaml", "license: MIT\n")
+        self.write("platforms/codex/skills/cat/demo/frontmatter.yaml", "license: MIT\n")
         self.assertEqual(self.run_cli("install", "-p", "codex", "--project", str(self.home)), 0)
         self.assertEqual((codex / "demo").resolve(), (skills.DIST_DIR / "codex/demo").resolve())
 
@@ -364,6 +366,55 @@ class CommandTests(SkillTestCase):
         self.assertFalse((target / "demo").is_symlink())
         self.assertTrue((target / "theirs").is_symlink())
 
+
+    # Categories
+
+    def test_install_and_uninstall_by_category(self):
+        self.shared()
+        self.write("skills/other/README.md", "# other\n\nOther skills.\n")
+        self.write("skills/other/extra/SKILL.md", "---\nname: extra\ndescription: x\n---\n\nx\n")
+        self.assertEqual(self.run_cli("install", "-p", "claude", "-c", "other", "--project", str(self.home)), 0)
+        target = self.home / ".claude/skills"
+        self.assertTrue((target / "extra").is_symlink())
+        self.assertFalse((target / "demo").exists())
+        self.assertEqual(self.run_cli("install", "-p", "claude", "--project", str(self.home)), 0)
+        self.assertEqual(self.run_cli("uninstall", "-p", "claude", "-c", "cat", "--project", str(self.home)), 0)
+        self.assertFalse((target / "demo").exists())
+        self.assertTrue((target / "extra").is_symlink())
+        self.assertEqual(self.run_cli("install", "-c", "nope", "--project", str(self.home)), 1)
+        self.assertEqual(self.run_cli("install", "-c", "other", "demo", "--project", str(self.home)), 1)
+
+    def test_layout_errors(self):
+        self.shared()
+        self.write("skills/flat/SKILL.md", "---\nname: flat\ndescription: x\n---\n\nx\n")
+        self.write("skills/zbare/demo/SKILL.md", "---\nname: demo\ndescription: x\n---\n\nx\n")
+        self.write("platforms/codex/skills/undefined/solo/SKILL.md", "---\nname: solo\ndescription: x\n---\n\nx\n")
+        self.write("platforms/claude/skills/wrong/demo/frontmatter.yaml", "effort: high\n")
+        self.write("skills/wrong/README.md", "# wrong\n\nWrong.\n")
+        with tempfile.TemporaryDirectory() as tmp:
+            reports = dict(skills.validate_all(Path(tmp)))
+        self.assertIn("outside any category", reports["skills/flat"].errors[0])
+        self.assertIn("missing README.md", reports["skills/zbare"].errors[0])
+        self.assertTrue(any("must be unique" in e for r in reports.values() for e in r.errors))
+        self.assertIn("not defined", reports["platforms/codex/skills/undefined"].errors[0])
+        self.assertIn("move it to platforms/claude/skills/cat/demo", reports["claude/demo"].errors[0])
+        self.assertEqual(self.run_cli("validate"), 1)
+
+    def test_new_creates_category_readme_with_todo(self):
+        self.assertEqual(self.run_cli("new", "fresh", "-c", "tools"), 0)
+        self.assertTrue((self.skills_dir / "tools/fresh/SKILL.md").is_file())
+        with tempfile.TemporaryDirectory() as tmp:
+            reports = dict(skills.validate_all(Path(tmp)))
+        self.assertIn("TODO", reports["skills/tools"].errors[0])
+        self.assertEqual(self.run_cli("new", "fresh", "-c", "cat"), 1)  # names are unique across categories
+
+    def test_list_groups_by_category(self):
+        self.shared()
+        self.write("platforms/codex/skills/cat/solo/SKILL.md", "---\nname: solo\ndescription: Solo. More.\n---\n\nx\n")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(skills.main(["list"]), 0)
+        self.assertEqual(out.getvalue(), "cat — Demo skills.\n  demo: Shared.\n  solo [codex only]: Solo.\n\n")
 
 if __name__ == "__main__":
     unittest.main()

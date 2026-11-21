@@ -21,7 +21,7 @@ A model's behavior in Codex comes from its weights plus that instruction set. Ne
 | `developer_instructions` (config or a `-p` profile file) | Adds a developer message before the conversation | yes: the `game` profile |
 | `[agents.<name>]`, or a role file in `$CODEX_HOME/agents/` | Adds a sub-agent role with its own instructions | yes: game-designer, game-critic |
 | hooks (`hooks.json`) | Add context or block actions at lifecycle events | yes: `platforms/codex/hooks/` |
-| MCP servers | Add tools | yes: `mcp/creative-director/` |
+| MCP servers | Add tools | yes: `mcp/web-dev/motion-forge/` |
 | `model_instructions_file` | Replaces the model's instruction set entirely | no: it would drop OpenAI's tuning for that model |
 | `model_catalog_json` | Replaces the whole catalog | no: the catalog would stop updating |
 
@@ -38,7 +38,7 @@ Codex 0.163.0 lists 8 models and hides 2 (`gpt-reserve`, `codex-auto-review`). 0
 
 Sub-agents run at `xhigh` effort on `gpt-6-astra` and on every 6.1 and 6.2 model; `gpt-6-sol` and `gpt-6-luna` leave them at the default. The three 5.6 models, `gpt-reserve`, and `codex-auto-review` share one older instruction set.
 
-None of the instruction sets says anything about game design, game feel, or engines. Only `gpt-6.2-sol` mentions games, in a rule against recreating existing ones. That gap is what this repo fills: the skills, the `game` profile, the agent roles, the hooks, and the creative-director MCP server.
+None of the instruction sets says anything about game design, game feel, or engines. Only `gpt-6.2-sol` mentions games, in a rule against recreating existing ones. That gap is what this repo fills: the skills, the `game` profile, the agent roles, the hooks, and the MCP servers.
 
 ## Development
 

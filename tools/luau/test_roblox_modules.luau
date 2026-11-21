@@ -1,12 +1,12 @@
 --!strict
 -- Tests for the pure-Luau Roblox modules shipped in skills. Run from the repo root:
 --   luau tools/luau/test_roblox_modules.luau
-local RemoteGuard = require("../../skills/roblox-scripting/assets/rojo-template/src/server/RemoteGuard")
-local PlayerData = require("../../skills/roblox-scripting/assets/rojo-template/src/server/PlayerData")
-local RoundSystem = require("../../skills/roblox-gameplay/assets/RoundSystem")
-local Juice = require("../../skills/roblox-scripting/assets/rojo-template/src/shared/Juice")
-local DialogueRunner = require("../../skills/roblox-narrative/assets/DialogueRunner")
-local ExampleDialogue = require("../../skills/roblox-narrative/assets/example/build/Dialogue")
+local RemoteGuard = require("../../skills/roblox/roblox-scripting/assets/rojo-template/src/server/RemoteGuard")
+local PlayerData = require("../../skills/roblox/roblox-scripting/assets/rojo-template/src/server/PlayerData")
+local RoundSystem = require("../../skills/roblox/roblox-gameplay/assets/RoundSystem")
+local Juice = require("../../skills/roblox/roblox-scripting/assets/rojo-template/src/shared/Juice")
+local DialogueRunner = require("../../skills/roblox/roblox-narrative/assets/DialogueRunner")
+local ExampleDialogue = require("../../skills/roblox/roblox-narrative/assets/example/build/Dialogue")
 
 local passed, failed = 0, 0
 local function test(name: string, fn: () -> ())

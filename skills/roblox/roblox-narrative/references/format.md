@@ -80,8 +80,8 @@ Spoken lines come first in a node, then its choices or `->` line.
 
 | File | Built by | Contents |
 |---|---|---|
-| `Dialogue.luau` | `story.py build` / `build_dialogue` | Typed data for DialogueRunner. Line 3 records the docs folder and their hash, so the Codex hooks can tell when it is out of date. |
-| `voiceover.md` | `story.py voiceover` / `export_voiceover` | Lines grouped by character with IDs, delivery, word counts, and seconds at 150 words per minute. |
-| `*.csv` | `story.py localization` / `export_localization` | `Key,Context,Example,Source` and one column per locale, the layout of Roblox's own localization CSVs. |
+| `Dialogue.luau` | `story.py build` | Typed data for DialogueRunner. Line 3 records the docs folder and their hash, so the Codex hooks can tell when it is out of date. |
+| `voiceover.md` | `story.py voiceover` | Lines grouped by character with IDs, delivery, word counts, and seconds at 150 words per minute. |
+| `*.csv` | `story.py localization` | `Key,Context,Example,Source` and one column per locale, the layout of Roblox's own localization CSVs. |
 
 IDs: spoken lines are `conversation.node.n` (counting from 1 in each node), choices are `conversation.node.choiceN`, and character names are `characters.id.name`. Name voice recordings after line IDs, and look text up with `Translator:FormatByKey(id)` in a localized game.

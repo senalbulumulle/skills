@@ -3,10 +3,10 @@
 | File | Installed to | What it does |
 | --- | --- | --- |
 | `game-instructions.md` | `$CODEX_HOME/game.config.toml`, as `developer_instructions` | Creative direction for games and software: commit to one idea, use concrete names and numbers, get a playable version running, make it feel good, verify before finishing, report plainly |
-| `agents/game-designer.toml` | `$CODEX_HOME/agents/` | A sub-agent that writes a buildable design with the sections `review_design` checks |
+| `agents/game-designer.toml` | `$CODEX_HOME/agents/` | A sub-agent that writes a buildable design: fantasy, core loop, hook, controls, win and fail, first minute, feedback, progression, scope, and tuning numbers |
 | `agents/game-critic.toml` | `$CODEX_HOME/agents/` | A sub-agent that playtests or reads the build and ranks what is broken, confusing, dull, or generic |
-| `agents/roblox-polisher.toml` | `$CODEX_HOME/agents/` | A sub-agent that adds and fixes effects, sounds, and UI feedback in a Roblox project with roblox-forge's `audit_polish` and `vfx_recipe`, using only real assets |
-| `agents/narrative-designer.toml` | `$CODEX_HOME/agents/` | A sub-agent that writes characters, a story outline, and NPC dialogue as Markdown, checks them with `review_story`, and builds the dialogue module, voiceover script, and localization CSV |
+| `agents/roblox-polisher.toml` | `$CODEX_HOME/agents/` | A sub-agent that adds and fixes effects, sounds, and UI feedback in a Roblox project from the roblox-gameplay effects catalog, using only real assets |
+| `agents/narrative-designer.toml` | `$CODEX_HOME/agents/` | A sub-agent that writes characters, a story outline, and NPC dialogue as Markdown, checks them with `story.py review`, and builds the dialogue module, voiceover script, and localization CSV |
 
 The profile also sets the model: the first of `gpt-6.2-astra` and `gpt-6-astra` that the installed Codex lists, at `high` reasoning effort. Pick another with `--model`.
 

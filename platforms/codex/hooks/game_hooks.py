@@ -4,7 +4,7 @@
 Codex runs: python3 game_hooks.py <SessionStart|UserPromptSubmit|PreToolUse|PostToolUse|Stop>
 with the event JSON on stdin, and reads JSON from stdout. Standard library only, Python 3.9+.
 Engine checks run only inside a game project. In any project, a request to build a game gets a short
-creative brief (plus Roblox guidance for Roblox requests and projects), and Stop checks lines added since the last commit for unfinished or generic content.
+creative brief (plus Roblox guidance for Roblox requests and projects).
 An internal error never blocks the agent: the hook prints a note to stderr and exits 0 with no output.
 """
 from __future__ import annotations
@@ -199,7 +199,7 @@ ENGINES = {
             "The server owns every outcome: validate and rate-limit every RemoteEvent/RemoteFunction argument.",
             'Use task.wait/task.spawn/task.delay and game:GetService("Name"), never wait()/spawn()/delay() or game.Name.',
             "Save data with UpdateAsync under a session lock; kick on load failure instead of playing on defaults.",
-            "If the roblox-forge MCP server is connected, run check_project after layout changes, map_remotes and audit_remotes after remote changes, and audit_feel and audit_polish after gameplay, effect, sound, or UI changes.",
+            "After gameplay, effect, sound, or UI changes, give every player action particles, a sound, and motion.",
             "Never publish (rojo upload, mantle deploy, rbxcloud): the user does that.",
         ],
     },
@@ -429,8 +429,7 @@ def check_roblox(project: Project, path: Path, text: str, rel: str) -> list[Issu
 
 
 # Properties whose value type is a sequence, range, or vector: assigning a Color3 or a plain number errors at
-# run time. The same table as VALUE_TYPES in mcp/roblox-forge/forge.py (tools/test_codex_hooks.py keeps them
-# identical).
+# run time.
 VALUE_TYPES = {
     "ParticleEmitter": {"Color": "ColorSequence", "Size": "NumberSequence", "Transparency": "NumberSequence",
                         "Squash": "NumberSequence", "Lifetime": "NumberRange", "Speed": "NumberRange",
@@ -519,31 +518,8 @@ def check_file(path: Path, cwd: Path) -> list[Issue]:
     return check(project, path, _read(path), rel)
 
 
-# ---------------------------------------------------------------- creative quality
+# ---------------------------------------------------------------- creative briefs
 
-# The same rules as mcp/creative-director/director.py (tools/test_codex_hooks.py keeps them identical).
-# Patterns are split across string pieces so this file never matches its own rules.
-UNFINISHED_RULES = (
-    ("filler-text", re.compile("lorem" + r"\s+" + "ipsum", re.I), "filler text"),
-    ("todo-stub", re.compile(r"\b(?:TO" + r"DO|FIX" + r"ME)\b(?:\([^)]*\))?\s*[:-]\s*.{0,40}?\b(?i:implement|placeholder|stub"
-                             r"|replace (?:this|with)|add (?:real|actual))"),
-     "a TODO stands in for the work"),
-    ("stub", re.compile(r"NotImplemented" + "Exception|\\b(?:to" + r"do|unimplemented)!\(|throw new Error\(\s*[\"'`]"
-                        "not " + "implemented", re.I),
-     "a stub stands in for the implementation"),
-    ("placeholder-text", re.compile(r"[\"'>]\s*(?:your (?:text|title|name|description) " + "here|insert [\\w ]{1,30} "
-                                    + "here|sample " + "text|placeholder " + "text)\\b", re.I),
-     "stand-in text that users would see"),
-    ("generic-title", re.compile(r"[\"'>#]\s*(?:My|Untitled|Awesome|Amazing|Epic|Cool) (?:Game|Adventure|Quest|Project)"
-                                 r"\b"),
-     "a generic title; name it after what makes it different"),
-    ("fake-asset-id", re.compile(r"(?:rbxasset" + r"id://|roblox\.com/asset/\?id=)(?:(?:0+|"
-                                 + "|".join("1234567890"[:n] for n in range(10, 2, -1))
-                                 + r")(?!\w)|(?=[\"'](?!\s*(?:\.\.|\+))))"),
-     "a Roblox asset ID that points at nothing; upload the real asset or leave the property unset"),
-    ("default-ui-text", re.compile(r"\bText\s*=\s*[\"'](?:Label|Button|Text" + "Label|Text" + "Button|Text" + r"Box)[\"']"),
-     "a default or class-name UI label; write what the player should read"),
-)
 GAME_REQUEST_RE = re.compile(r"\b(?:games?|gameplay|minigames?|boss(?:es)?|enem(?:y|ies)|platformer|shooter|roguelike|"
                              r"rpg|obby|tycoon|simulator|npcs?|quests?)\b", re.I)
 LEVEL_RE = re.compile(r"\b(?:levels?|mechanics?|power-?ups?|weapons?)\b", re.I)
@@ -556,14 +532,14 @@ CREATIVE_BRIEF = ("Creative brief (from game_hooks): commit to one specific idea
 ROBLOX_RE = re.compile(r"\b(?:roblox|rojo|obby|obbies)\b", re.I)
 ROBLOX_BRIEF = ("Roblox: assume many players are on phones (default thumbstick and jump, a few large buttons sized "
                 "with Scale) and give them a reason to play together. A new player should act within 10 seconds and "
-                "earn something within 60. The server decides every outcome. If roblox-forge is connected, run "
-                "map_remotes and audit_feel on the project before you finish.")
+                "earn something within 60. The server decides every outcome. Before you finish, check that every remote handler "
+                "validates its arguments and every player action gives feedback.")
 POLISH_RE = re.compile(r"\b(?:vfx|sfx|effects?|particles?|trails?|beams?|sounds?|audio|music|juice|juicy|polish|"
                        r"feedback|ui|hud|menus?|buttons?|animations?|tweens?)\b", re.I)
 POLISH_BRIEF = ("Roblox polish: layer each important moment (particles, a sound, a quick tween or camera shake) and "
                 "start it the frame the player acts. Use only real assets: built-in rbxasset:// files, the user's "
-                "uploads, or IDs found with Roblox Studio's search_asset tool; never invent an asset ID. If roblox-forge "
-                "is connected, start effects from vfx_recipe and run audit_polish and audit_feel before you finish. If "
+                "uploads, or IDs found with Roblox Studio's search_asset tool; never invent an asset ID. Start effects "
+                "from the roblox-gameplay skill's effects-catalog.md and keep each property in its listed range. If "
                 "Roblox Studio's MCP server is connected, play-test with start_stop_play and look with screen_capture.")
 # "character" alone usually means the player's avatar in Roblox, so only character-writing phrases count.
 STORY_RE = re.compile(r"\b(?:npcs?|dialog(?:ue)?s?|story|stories|storylines?|narrative|quests?|cutscenes?|lore|"
@@ -571,75 +547,13 @@ STORY_RE = re.compile(r"\b(?:npcs?|dialog(?:ue)?s?|story|stories|storylines?|nar
                       r"characters? (?:sheets?|bios?|arcs?|profiles?|personalit(?:y|ies)))\b", re.I)
 STORY_BRIEF = ("Roblox story: write the Markdown docs first (characters.md with a distinct voice and a vo direction "
                "per character, story.md with premise, acts, and the flags game code sets, and one dialogue/<id>.md per "
-               "conversation), keep lines under 100 characters for phones, and give every node a way out. If "
-               "roblox-forge is connected, run review_story until it is clean, then build_dialogue, export_voiceover, "
-               "and export_localization; play the result with DialogueRunner on the server. Never hand-edit the "
+               "conversation), keep lines under 100 characters for phones, and give every node a way out. Run "
+               "the roblox-narrative skill's story.py review until it is clean, then story.py build, voiceover, "
+               "and localization; play the result with DialogueRunner on the server. Never hand-edit the "
                "generated dialogue module: change the docs and rebuild.")
-MAX_LINE_SHOWN = 100
-
-
-def _skip_for_unfinished(path: str) -> bool:
-    """Tests, fixtures, lockfiles, and minified files may contain these patterns on purpose."""
-    parts = path.lower().split("/")
-    name = parts[-1]
-    return (name.startswith("test_") or ".test." in name or ".spec." in name or name.endswith(("_test.py", ".lock",
-            ".min.js", "-lock.json")) or any(part in {"test", "tests", "__tests__", "spec", "fixtures"} for part in parts))
-
-
-def _git(root: Path, *args: str, timeout: int = 10) -> Optional[str]:
-    try:
-        out = subprocess.run(["git", "-C", str(root), "-c", "core.quotePath=false", *args],
-                             capture_output=True, text=True, errors="replace", timeout=timeout)
-    except (OSError, subprocess.SubprocessError):
-        return None
-    return out.stdout if out.returncode == 0 else None
-
-
-def added_lines(cwd: Path) -> list[tuple[str, int, str]]:
-    """(path relative to the git root, line number, text) for each line added since HEAD, untracked files included."""
-    top = _git(cwd, "rev-parse", "--show-toplevel", timeout=5)
-    if top is None:
-        return []
-    root = Path(top.strip())
-    added: list[tuple[str, int, str]] = []
-    diff = _git(root, "diff", "--no-color", "--no-ext-diff", "-U0", "HEAD") or ""
-    path, number = None, 0
-    for line in diff.splitlines():
-        if line.startswith("+++ "):
-            path = line[6:] if line.startswith("+++ b/") else None
-        elif line.startswith("@@"):
-            m = re.match(r"@@ -\S+ \+(\d+)", line)
-            number = int(m.group(1)) if m else 0
-        elif line.startswith("+") and path is not None:
-            added.append((path, number, line[1:]))
-            number += 1
-    head_exists = _git(root, "rev-parse", "--verify", "--quiet", "HEAD", timeout=5) is not None
-    new_files = _git(root, "ls-files", "-z", "--others", "--exclude-standard") or ""
-    if not head_exists:  # no commit yet: every tracked file is new too
-        new_files += _git(root, "ls-files", "-z") or ""
-    for name in sorted(set(filter(None, new_files.split("\0"))))[:MAX_STOP_FILES]:
-        file = root / name
-        if file.is_file() and file.stat().st_size <= 1_000_000:
-            data = file.read_bytes()
-            if b"\0" not in data[:4096]:
-                added += [(name, i, text) for i, text in enumerate(data.decode("utf-8", "replace").splitlines(), 1)]
-    return added
-
-
-def unfinished_issues(cwd: Path) -> list[Issue]:
-    issues = []
-    for path, number, text in added_lines(cwd):
-        if _skip_for_unfinished(path):
-            continue
-        for _rule, pattern, message in UNFINISHED_RULES:
-            if pattern.search(text):
-                issues.append(Issue("error", path, number, f"{message}: {text.strip()[:MAX_LINE_SHOWN]}"))
-    return issues
-
-
 # ---------------------------------------------------------------- generated dialogue
 
-# Written by the roblox-narrative skill's story.py build (and roblox-forge's build_dialogue). Line 2 is the
+# Written by the roblox-narrative skill's story.py build. Line 2 is the
 # marker; line 3 names the docs folder and the hash of the docs it was built from.
 DIALOGUE_MARKER = "-- Generated from Markdown by roblox-narrative (story.py build)."
 DOCS_LINE_RE = re.compile(r"^-- Docs: (?P<docs>.+) \(sha256 (?P<hash>[0-9a-f]{64})\)$")
@@ -701,7 +615,7 @@ def stale_dialogue(cwd: Path, changed: list[Path]) -> list[Issue]:
                     except ValueError:
                         rel = str(path)
                     issues.append(Issue("error", rel, 1, f"built from {docs} but the docs changed since: run "
-                                                         "build_dialogue (roblox-forge) or story.py build again"))
+                                                         "story.py build again"))
     return issues
 
 
@@ -863,7 +777,7 @@ def patch_review(patch: str, cwd: Path) -> tuple[str, list[str]]:
                 return f"{p} is generated ({reason}). Edit the source instead.", []
         if op == "Update" and path.suffix in (".luau", ".lua") and path.is_file() and dialogue_header(path):
             return (f"{p} is built from the Markdown docs in {dialogue_header(path)[0]}. Change the docs and run "
-                    "build_dialogue (roblox-forge) or story.py build again."), []
+                    "story.py build again."), []
         if not project or project.engine != "unity":
             continue
         meta = Path(str(path) + ".meta")
@@ -1006,15 +920,10 @@ def on_stop(event: dict) -> Optional[dict]:
     changed = changed_files(cwd)
     errors = [i for f in changed for i in check_file(f, cwd) if i.level == "error"]
     errors += stale_dialogue(cwd, changed)
-    unfinished = unfinished_issues(cwd)
-    parts = []
-    if errors:
-        parts.append("Engine checks found errors in changed files:\n" + _report(errors))
-    if unfinished:
-        parts.append("Lines added since the last commit look unfinished or generic:\n" + _report(unfinished))
-    if not parts:
+    if not errors:
         return None
-    return {"decision": "block", "reason": "\n".join(parts) + "\nFix them, or tell the user why they should stay."}
+    return {"decision": "block", "reason": "Engine checks found errors in changed files:\n" + _report(errors)
+            + "\nFix them, or tell the user why they should stay."}
 
 
 HANDLERS = {"SessionStart": on_session_start, "UserPromptSubmit": on_user_prompt_submit,

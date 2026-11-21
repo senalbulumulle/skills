@@ -4,11 +4,11 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const Juice = require("../skills/game-feel/assets/juice.js");
-const Procgen = require("../skills/game-procgen/assets/procgen.js");
-const AI = require("../skills/game-ai/assets/ai.js");
-const Sfx = require("../skills/game-audio/assets/sfx.js");
-const PixelSprite = require("../skills/game-art/assets/pixel-sprite.js");
+const Juice = require("../skills/game-dev/game-feel/assets/juice.js");
+const Procgen = require("../skills/game-dev/game-procgen/assets/procgen.js");
+const AI = require("../skills/game-dev/game-ai/assets/ai.js");
+const Sfx = require("../skills/game-dev/game-audio/assets/sfx.js");
+const PixelSprite = require("../skills/game-dev/game-art/assets/pixel-sprite.js");
 
 const step = (fn, seconds, dt = 1 / 60) => { for (let t = 0; t < seconds; t += dt) fn(dt); };
 

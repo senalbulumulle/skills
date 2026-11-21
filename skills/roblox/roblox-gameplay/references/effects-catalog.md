@@ -1,6 +1,6 @@
 # Effects catalog
 
-Generated from Roblox Studio 0.748.0.7481526 by `mcp/roblox-forge/studio_catalog.py`; don't edit by hand.
+Taken from Roblox Studio 0.748.0.7481526. Check it against a newer Studio before relying on a range.
 
 ## Built-in files
 

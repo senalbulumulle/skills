@@ -19,7 +19,7 @@ sys.path.insert(0, str(HOOKS))
 import discover  # noqa: E402
 import install as install_module  # noqa: E402
 
-STORY_EXAMPLE = HOOKS.parents[2] / "skills" / "roblox-narrative" / "assets" / "example" / "docs"
+STORY_EXAMPLE = HOOKS.parents[2] / "skills" / "roblox" / "roblox-narrative" / "assets" / "example" / "docs"
 
 
 def load_story():
@@ -397,7 +397,7 @@ class CreativeBrief(HookCase):
         self.assertIn("Roblox:", self.context(self.prompt("build me an obby with 10 stages")))
         self.assertNotIn("Roblox:", self.context(self.prompt("Make a roguelike about a lighthouse keeper")))
         make_roblox(self.root)
-        self.assertIn("map_remotes", self.context(self.prompt("add a new level with moving platforms")))
+        self.assertIn("validates its arguments", self.context(self.prompt("add a new level with moving platforms")))
         self.assertIsNone(self.prompt("rename the remote events"))
 
     def test_roblox_polish_guidance(self):
@@ -407,7 +407,7 @@ class CreativeBrief(HookCase):
         self.assertNotIn("Creative brief", out)
         make_roblox(self.root)
         out = self.context(self.prompt("add sparkles and a sound to the coin pickup"))
-        self.assertIn("vfx_recipe", out)
+        self.assertIn("effects-catalog.md", out)
         self.assertIn("search_asset", out)
         both = self.context(self.prompt("build a tycoon with satisfying button effects"))
         self.assertIn("Creative brief", both)
@@ -419,8 +419,8 @@ class CreativeBrief(HookCase):
         out = self.context(self.prompt("write NPC dialogue for my Roblox hotel"))
         self.assertIn("Roblox story", out)
         make_roblox(self.root)
-        self.assertIn("build_dialogue", self.context(self.prompt("add a voiceover script for the intro cutscene")))
-        self.assertIn("review_story", self.context(self.prompt("create character bios for the cast")))
+        self.assertIn("story.py build", self.context(self.prompt("add a voiceover script for the intro cutscene")))
+        self.assertIn("story.py review", self.context(self.prompt("create character bios for the cast")))
         self.assertIsNone(self.prompt("make the character jump higher"))  # the avatar, not a story
         self.assertIsNone(self.prompt("write a script for the sliding door"))
 
@@ -431,7 +431,7 @@ class CreativeBrief(HookCase):
         self.assertIsNone(self.prompt("fix the crash in level 2"))  # no creative verb
 
 
-class UnfinishedWork(HookCase):
+class GitStopChecks(HookCase):
     def setUp(self):
         super().setUp()
         shutil.rmtree(self.root / ".git")
@@ -439,38 +439,6 @@ class UnfinishedWork(HookCase):
 
     def stop(self):
         return self.run_hook("Stop", {"stop_hook_active": False})
-
-    def test_flags_only_lines_added_since_the_last_commit(self):
-        write(self.root, "src/old.js", 'const title = "My ' + 'Game";\n')
-        git(self.root, "add", "-A")
-        git(self.root, "commit", "-qm", "init")
-        self.assertIsNone(self.stop())  # committed content is the user's business
-        write(self.root, "src/old.js", 'const title = "My ' + 'Game";\n// TO' + 'DO: implement scoring\n')
-        write(self.root, "src/ui.lua", 'label.Text = "Your text ' + 'here"\n')
-        out = self.stop()
-        self.assertEqual(out["decision"], "block")
-        self.assertIn("src/old.js:2: error: a TODO stands in for the work", out["reason"])
-        self.assertIn("src/ui.lua:1: error: stand-in text", out["reason"])
-        self.assertNotIn("src/old.js:1", out["reason"])
-        self.assertIsNone(self.run_hook("Stop", {"stop_hook_active": True}))
-
-    def test_before_the_first_commit_every_file_is_new(self):
-        write(self.root, "README.md", "lor" + "em ipsum dolor\n")
-        git(self.root, "add", "-A")
-        self.assertIn("README.md:1: error: filler text", self.stop()["reason"])
-
-    def test_roblox_stand_ins(self):
-        write(self.root, "src/client/Shop.client.luau", 'icon.Image = "rbxasset' + 'id://0"\nbuy.Text = "Butt' + 'on"\n'
-              'icon.Image = "rbxasset' + 'id://" .. item.icon\n')
-        reason = self.stop()["reason"]
-        self.assertIn("src/client/Shop.client.luau:1: error: a Roblox asset ID that points at nothing", reason)
-        self.assertIn("src/client/Shop.client.luau:2: error: a default or class-name UI label", reason)
-        self.assertNotIn("Shop.client.luau:3", reason)
-
-    def test_tests_and_ordinary_todos_are_fine(self):
-        write(self.root, "tests/test_text.py", 'SAMPLE = "lor' + 'em ipsum"\n')
-        write(self.root, "src/game.py", "# TO" + "DO: tune the jump arc after playtesting\nraise NotImplementedError\n")
-        self.assertIsNone(self.stop())
 
     def build_example(self) -> Path:
         story = load_story()
@@ -504,25 +472,6 @@ class UnfinishedWork(HookCase):
         self.assertEqual(game_hooks.docs_hash(STORY_EXAMPLE), load_story().docs_hash(STORY_EXAMPLE))
         self.assertEqual(game_hooks.DIALOGUE_MARKER, load_story().MARKER.split(" Don't")[0])
         self.assertIsNone(game_hooks.docs_hash(self.root))
-
-    def test_value_types_match_roblox_forge(self):
-        sys.path.insert(0, str(HOOKS.parents[2] / "mcp" / "roblox-forge"))
-        try:
-            import forge
-            import game_hooks
-        finally:
-            sys.path.pop(0)
-        self.assertEqual(game_hooks.VALUE_TYPES, forge.VALUE_TYPES)
-
-    def test_rules_match_the_creative_director_server(self):
-        sys.path.insert(0, str(HOOKS.parents[2] / "mcp" / "creative-director"))
-        try:
-            import director
-            import game_hooks
-        finally:
-            sys.path.pop(0)
-        self.assertEqual([(r, p.pattern, p.flags, m) for r, p, m in game_hooks.UNFINISHED_RULES],
-                         [(r, p.pattern, p.flags, m) for r, p, m in director.UNFINISHED_RULES])
 
 
 class Installer(unittest.TestCase):

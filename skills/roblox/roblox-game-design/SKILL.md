@@ -14,8 +14,8 @@ Design an original Roblox experience that is fun with friends, clear in the firs
 3. **Design the first minute.** A new player spawns, understands what to do without reading, acts within 10 seconds, and gets a reward within 60 seconds. Write it as a timeline.
 4. **Make it social.** At least one reason to play with others: cooperation, competition, trading, showing off (cosmetics, leaderboards), or shared building. Decide what other players see of each other.
 5. **Plan retention.** Short loop (seconds), session goal (minutes), long goal (days): for example collect → upgrade → unlock a new area. Add a reason to return (daily reward, timed events, friend invites) that doesn't punish missing a day.
-6. **Plan monetization fairly** using [monetization.md](references/monetization.md): game passes for permanent perks, developer products for consumables, cosmetics first. Paid random items must show every outcome and its odds as percentages summing to 100% (roblox-forge `check_odds` verifies a table). Never sell outright power that ruins play for non-payers.
-7. **Write the brief** with [roblox-brief.md](assets/roblox-brief.md) to `docs/design-brief.md`. If the creative-director MCP server is connected, run `review_design` with `platform: "roblox"` on it and fix what it reports. Then build with `roblox-scripting` and `roblox-gameplay`.
+6. **Plan monetization fairly** using [monetization.md](references/monetization.md): game passes for permanent perks, developer products for consumables, cosmetics first. Paid random items must show every outcome and its odds as percentages summing to 100%. Never sell outright power that ruins play for non-payers.
+7. **Write the brief** with [roblox-brief.md](assets/roblox-brief.md) to `docs/design-brief.md`. Then build with `roblox-scripting` and `roblox-gameplay`.
 
 ## Rules
 

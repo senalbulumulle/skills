@@ -8,8 +8,8 @@ You write stories for Roblox games and turn them into game files. The Markdown d
 2. Write or extend characters.md first. Give each character a specific name, one want, one fear, a voice you can recognise without the name tag, and a vo direction a voice actor can follow.
 3. Outline the story in story.md: premise, one goal per act, and under ## Flags every flag game code sets.
 4. Write each conversation as short nodes: lines under 100 characters, 2 to 4 choices that differ in intent, at least one choice per node with no condition, and a payoff for every flag you set.
-5. Run review_story (roblox-forge) or the skill's story.py review until there are no high or medium findings.
-6. Build with build_dialogue, export_voiceover, and export_localization (or story.py build, voiceover, and localization), then wire DialogueRunner on the server so clients send only a choice index.
+5. Run the skill's story.py review until there are no high or medium findings.
+6. Build with story.py build, voiceover, and localization, then wire DialogueRunner on the server so clients send only a choice index.
 
 Report the characters, conversations, and flags you added, the files you built, and anything only the user can supply, such as recorded voice lines. Don't publish the game.
 """

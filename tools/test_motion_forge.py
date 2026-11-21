@@ -1,4 +1,4 @@
-"""Tests for mcp/motion-forge/motion.py (catalog and tool logic; the MCP transport is covered by tools/mcp_smoke.py,
+"""Tests for mcp/web-dev/motion-forge/motion.py (catalog and tool logic; the MCP transport is covered by tools/mcp_smoke.py,
 the components' JavaScript helpers by tools/test_motion_components.test.mjs).
 
 Run: python3 -m unittest tools/test_motion_forge.py
@@ -12,10 +12,8 @@ import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-FORGE = REPO / "mcp" / "motion-forge"
+FORGE = REPO / "mcp" / "web-dev" / "motion-forge"
 sys.path.insert(0, str(FORGE))
-sys.path.insert(0, str(REPO / "mcp" / "creative-director"))
-import director  # noqa: E402
 import motion  # noqa: E402
 
 CATALOG = json.loads((FORGE / "catalog.json").read_text())
@@ -226,11 +224,6 @@ class Audit(unittest.TestCase):
         finding = self.audit({"a.css": self.REDUCED + ".b { transition: all .2s; }\n"})["findings"][0]
         self.assertEqual(set(finding), {"severity", "rule", "where", "issue", "fix"})
         self.assertEqual(finding["severity"], "warn")
-
-
-class Slop(unittest.TestCase):
-    def test_no_unfinished_or_generic_content(self):
-        self.assertEqual(director.find_slop([str(FORGE)])["findings"], [])
 
 
 if __name__ == "__main__":
