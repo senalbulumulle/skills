@@ -1,6 +1,6 @@
 # Authoring rules for this repo
 
-Skills here must work in Claude Code, Codex, Gemini CLI, GitHub Copilot, Cursor, and OpenCode. Follow these rules for every change.
+Skills here must work in Claude Code and Codex. Follow these rules for every change.
 
 ## Layout
 

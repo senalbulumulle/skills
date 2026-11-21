@@ -1,6 +1,6 @@
 # skills
 
-Creative skills for game development and software development. Each skill works in Claude Code, Codex, Gemini CLI, GitHub Copilot, Cursor, and OpenCode.
+Creative skills for game development and software development. Each skill works in Claude Code and Codex.
 
 ## Installation
 
@@ -34,7 +34,7 @@ cd skills
 tools/skills.py install
 ```
 
-This links every skill into `~/.claude/skills/` (Claude Code) and `~/.agents/skills/` (Codex). Gemini CLI, GitHub Copilot, Cursor, and OpenCode also read `~/.agents/skills/`, so they pick the skills up too. The installs link back to the clone, so keep it where it is.
+This links every skill into `~/.claude/skills/` (Claude Code) and `~/.agents/skills/` (Codex). The installs link back to the clone, so keep it where it is.
 
 ### Update
 
@@ -47,10 +47,10 @@ tools/skills.py install
 
 ### Choose platforms
 
-Pick one or more of `claude`, `codex`, `gemini`, `copilot`, `cursor`, and `opencode`:
+Install for just one of `claude` or `codex` (the default is both):
 
 ```sh
-tools/skills.py install -p claude -p cursor
+tools/skills.py install -p claude
 ```
 
 ### Install into one project

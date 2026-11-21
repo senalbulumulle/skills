@@ -39,38 +39,18 @@ SPEC_KEYS = {"name", "description", "license", "compatibility", "metadata", "all
 
 # user/project: install folders relative to $HOME and to a project root.
 # keys: frontmatter fields only this platform understands.
-# also_reads: other platforms whose install folders this one loads too.
 PLATFORMS = {
     "claude": {
-        "title": "Claude Code", "user": ".claude/skills", "project": ".claude/skills",
+        "user": ".claude/skills", "project": ".claude/skills",
         "keys": {"when_to_use", "argument-hint", "arguments", "disable-model-invocation",
                  "user-invocable", "disallowed-tools", "model", "effort", "context", "agent",
                  "background", "hooks", "paths", "shell"},
-        "also_reads": [],
     },
     "codex": {
-        "title": "Codex", "user": ".agents/skills", "project": ".agents/skills",
-        "keys": set(), "also_reads": [],
-    },
-    "gemini": {
-        "title": "Gemini CLI", "user": ".gemini/skills", "project": ".gemini/skills",
-        "keys": set(), "also_reads": ["codex"],
-    },
-    "copilot": {
-        "title": "GitHub Copilot", "user": ".copilot/skills", "project": ".github/skills",
-        "keys": set(), "also_reads": ["codex", "claude"],
-    },
-    "cursor": {
-        "title": "Cursor", "user": ".cursor/skills", "project": ".cursor/skills",
-        "keys": {"paths", "globs", "disable-model-invocation", "icon", "color"},
-        "also_reads": ["codex", "claude"],
-    },
-    "opencode": {
-        "title": "OpenCode", "user": ".config/opencode/skills", "project": ".opencode/skills",
-        "keys": {"disable-model-invocation"}, "also_reads": ["codex", "claude"],
+        "user": ".agents/skills", "project": ".agents/skills",
+        "keys": set(),
     },
 }
-# ~/.agents/skills (Codex) is also read by Gemini CLI, Copilot, Cursor, and OpenCode.
 DEFAULT_PLATFORMS = ["claude", "codex"]
 
 NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
@@ -529,11 +509,6 @@ def cmd_install(args: argparse.Namespace) -> int:
                 continue
             link.symlink_to(src.resolve(), target_is_directory=True)
             print(f"linked   {link} -> {src.resolve()}")
-    for p in platforms:
-        overlap = [q for q in PLATFORMS[p]["also_reads"] if q in platforms]
-        if overlap:
-            print(f"note: {PLATFORMS[p]['title']} also loads the {', '.join(overlap)} folders, so a skill "
-                  f"installed for both may be listed twice or that copy may win over the {p} variant")
     if any(n in overlay_names(p) for p in platforms for n in sources[p]):
         print("note: platform variants are copies in dist/; run install again after editing or pulling")
     return status

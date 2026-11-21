@@ -116,12 +116,12 @@ class ValidateTests(SkillTestCase):
 
     def test_claude_only_key_warns(self):
         r = self.assertValid(self.make(skill_md=self.frontmatter("name: demo\ndescription: x\ndisable-model-invocation: true")))
-        self.assertTrue(any("only works in claude, cursor, opencode" in w for w in r.warnings))
+        self.assertTrue(any("only works in claude" in w for w in r.warnings))
 
     def test_platform_key_allowed_for_that_platform(self):
-        skill = self.make(skill_md=self.frontmatter("name: demo\ndescription: x\ncolor: blue"))
-        self.assertEqual(skills.validate_skill(skill, "cursor").warnings, [])
-        self.assertTrue(any("only works in cursor" in w for w in skills.validate_skill(skill, "claude").warnings))
+        skill = self.make(skill_md=self.frontmatter("name: demo\ndescription: x\neffort: high"))
+        self.assertEqual(skills.validate_skill(skill, "claude").warnings, [])
+        self.assertTrue(any("only works in claude" in w for w in skills.validate_skill(skill, "codex").warnings))
 
     def test_optional_spec_fields(self):
         md = self.frontmatter(
@@ -288,20 +288,20 @@ class CommandTests(SkillTestCase):
 
     def test_frontmatter_patch_merges_and_removes(self):
         self.shared(extra="license: MIT\n")
-        self.write("platforms/cursor/skills/demo/frontmatter.yaml", "color: blue\nlicense:\n")
-        built, data, body = self.built_frontmatter("cursor")
-        self.assertEqual(data, {"name": "demo", "description": "Shared.", "color": "blue"})
+        self.write("platforms/claude/skills/demo/frontmatter.yaml", "effort: high\nlicense:\n")
+        built, data, body = self.built_frontmatter("claude")
+        self.assertEqual(data, {"name": "demo", "description": "Shared.", "effort": "high"})
         self.assertEqual(body, "\nShared body.\n")
-        r = skills.validate_skill(built, "cursor")
+        r = skills.validate_skill(built, "claude")
         self.assertEqual((r.errors, r.warnings), ([], []))
 
     def test_override_files_replace_and_add(self):
         self.shared()
         self.write("skills/demo/references/guide.md", "shared guide\n")
-        self.write("platforms/gemini/skills/demo/SKILL.md", "---\nname: demo\ndescription: Gemini.\n---\n\nG.\n")
-        self.write("platforms/gemini/skills/demo/references/extra.md", "extra\n")
-        built, data, _ = self.built_frontmatter("gemini")
-        self.assertEqual(data["description"], "Gemini.")
+        self.write("platforms/codex/skills/demo/SKILL.md", "---\nname: demo\ndescription: Codex.\n---\n\nG.\n")
+        self.write("platforms/codex/skills/demo/references/extra.md", "extra\n")
+        built, data, _ = self.built_frontmatter("codex")
+        self.assertEqual(data["description"], "Codex.")
         self.assertEqual((built / "references/guide.md").read_text(), "shared guide\n")
         self.assertTrue((built / "references/extra.md").is_file())
         self.assertFalse((built / "frontmatter.yaml").exists())
@@ -321,38 +321,37 @@ class CommandTests(SkillTestCase):
 
     def test_validate_checks_variants_with_platform_keys(self):
         self.shared()
-        self.write("platforms/cursor/skills/demo/frontmatter.yaml", "color: blue\n")
+        self.write("platforms/claude/skills/demo/frontmatter.yaml", "effort: high\n")
         self.assertEqual(self.run_cli("validate", "--strict"), 0)
-        self.write("platforms/claude/skills/demo/frontmatter.yaml", "color: blue\n")
+        self.write("platforms/codex/skills/demo/frontmatter.yaml", "effort: high\n")
         self.assertEqual(self.run_cli("validate", "--strict"), 1)
 
     def test_platform_only_skill(self):
         self.shared()
-        self.assertEqual(self.run_cli("new", "solo", "-p", "gemini"), 0)
-        self.assertTrue((skills.PLATFORMS_DIR / "gemini/skills/solo/SKILL.md").is_file())
-        self.assertEqual(self.run_cli("new", "demo", "-p", "gemini"), 1)
-        self.assertEqual(skills.platform_skill_names("gemini"), ["demo", "solo"])
+        self.assertEqual(self.run_cli("new", "solo", "-p", "codex"), 0)
+        self.assertTrue((skills.PLATFORMS_DIR / "codex/skills/solo/SKILL.md").is_file())
+        self.assertEqual(self.run_cli("new", "demo", "-p", "codex"), 1)
+        self.assertEqual(skills.platform_skill_names("codex"), ["demo", "solo"])
         self.assertEqual(skills.platform_skill_names("claude"), ["demo"])
 
     def test_install_links_variants_to_dist(self):
         self.shared()
-        self.write("platforms/cursor/skills/solo/SKILL.md", "---\nname: solo\ndescription: x\n---\n\nx\n")
-        self.assertEqual(self.run_cli("install", "-p", "cursor", "-p", "claude", "--project", str(self.home)), 0)
-        cursor, claude = self.home / ".cursor/skills", self.home / ".claude/skills"
-        self.assertEqual((cursor / "demo").resolve(), (self.skills_dir / "demo").resolve())
-        self.assertEqual((cursor / "solo").resolve(), (skills.DIST_DIR / "cursor/solo").resolve())
+        self.write("platforms/codex/skills/solo/SKILL.md", "---\nname: solo\ndescription: x\n---\n\nx\n")
+        self.assertEqual(self.run_cli("install", "-p", "codex", "-p", "claude", "--project", str(self.home)), 0)
+        codex, claude = self.home / ".agents/skills", self.home / ".claude/skills"
+        self.assertEqual((codex / "demo").resolve(), (self.skills_dir / "demo").resolve())
+        self.assertEqual((codex / "solo").resolve(), (skills.DIST_DIR / "codex/solo").resolve())
         self.assertFalse((claude / "solo").exists())
         # Adding an override later re-points the existing link at the built variant.
-        self.write("platforms/cursor/skills/demo/frontmatter.yaml", "color: red\n")
-        self.assertEqual(self.run_cli("install", "-p", "cursor", "--project", str(self.home)), 0)
-        self.assertEqual((cursor / "demo").resolve(), (skills.DIST_DIR / "cursor/demo").resolve())
+        self.write("platforms/codex/skills/demo/frontmatter.yaml", "license: MIT\n")
+        self.assertEqual(self.run_cli("install", "-p", "codex", "--project", str(self.home)), 0)
+        self.assertEqual((codex / "demo").resolve(), (skills.DIST_DIR / "codex/demo").resolve())
 
     def test_install_all_uses_each_platform_folder(self):
         self.shared()
         self.assertEqual(self.run_cli("install", "-p", "all", "--project", str(self.home)), 0)
         for cfg in skills.PLATFORMS.values():
             self.assertTrue((self.home / cfg["project"] / "demo").is_symlink(), cfg["project"])
-        self.assertTrue((self.home / ".github/skills/demo").is_symlink())
 
     def test_uninstall_all_removes_only_repo_links(self):
         self.shared()

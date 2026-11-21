@@ -1,6 +1,6 @@
 # Platform variants
 
-Every platform here reads the same `SKILL.md` format, so most skills belong only in `skills/`. Use a platform folder when a skill must differ on one platform.
+Claude Code and Codex read the same `SKILL.md` format, so most skills belong only in `skills/`. Use a platform folder when a skill must differ on one platform.
 
 ```
 platforms/<platform>/skills/<name>/
