@@ -7,8 +7,7 @@
 #   scripts/codex/install-codex-mcp.sh --uninstall      remove them, if they point at this checkout
 #
 # The servers run from this checkout through uv, so re-run this script if you move the repository.
-# Registrations from an older layout of this checkout are moved to the current server path, and registrations of
-# servers this repo no longer ships (RETIRED) are removed when they point at this checkout.
+# Registrations from an older layout of this checkout are moved to the current server path.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_common.sh"
 
@@ -67,15 +66,6 @@ else:
     print("other")
 ' "$2" "$REPO_ROOT/mcp/"
 }
-
-# Servers removed from this repo: a registration still pointing at this checkout would fail to start.
-RETIRED="roblox/roblox-forge"
-for entry in $RETIRED; do
-  name="${entry#*/}"
-  case "$(registration "$name" "$REPO_ROOT/mcp/$entry/server.py")" in
-    same|ours) codex mcp remove "$name" >/dev/null; info "Removed the retired MCP server '$name'." ;;
-  esac
-done
 
 if [ "$uninstall" = 1 ]; then
   for entry in $SERVERS; do

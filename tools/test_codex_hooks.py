@@ -19,18 +19,6 @@ sys.path.insert(0, str(HOOKS))
 import discover  # noqa: E402
 import install as install_module  # noqa: E402
 
-STORY_EXAMPLE = HOOKS.parents[2] / "skills" / "roblox" / "roblox-narrative" / "assets" / "example" / "docs"
-
-
-def load_story():
-    """The roblox-narrative skill's story.py, which writes the dialogue modules the hooks guard."""
-    import importlib.util
-    spec = importlib.util.spec_from_file_location("story", STORY_EXAMPLE.parents[2] / "scripts" / "story.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
 class install:  # noqa: N801  run the installer quietly
     @staticmethod
     def main(argv):
@@ -76,13 +64,6 @@ def make_godot(root: Path, major: int = 4) -> Path:
         write(root, "project.godot", 'config_version=5\n[application]\nconfig/features=PackedStringArray("4.3", "Forward Plus")\n')
     else:
         write(root, "project.godot", "config_version=4\n[application]\n")
-    return root
-
-
-def make_roblox(root: Path) -> Path:
-    write(root, "default.project.json", json.dumps({"name": "G", "tree": {"$className": "DataModel",
-          "ServerScriptService": {"$path": "src/server"}}}))
-    (root / "src" / "server").mkdir(parents=True)
     return root
 
 
@@ -139,8 +120,6 @@ class Detection(HookCase):
             (lambda r: make_unity(r), "Unity 2022.3.10f1"),
             (lambda r: make_godot(r, 4), "Godot 4.3"),
             (lambda r: make_godot(r, 3), "Godot 3"),
-            (lambda r: make_roblox(r), "Roblox (Rojo)"),
-            (lambda r: write(r, "Place.rbxlx"), "Roblox (Rojo)"),
             (lambda r: write(r, "Cargo.toml", '[dependencies]\nbevy = "0.14"\n'), "Bevy 0.14"),
             (lambda r: write(r, "Cargo.toml", '[dependencies]\nbevy = { version = "0.15", features = [] }\n'), "Bevy 0.15"),
             (lambda r: write(r, "game.project", "[project]\n"), "Defold"),
@@ -165,14 +144,14 @@ class Detection(HookCase):
 
     def test_subdirectory_and_monorepo(self):
         make_unity(self.root / "client")
-        make_roblox(self.root / "roblox")
+        make_godot(self.root / "server")
         text = self.context(self.start())
         self.assertIn("Unity", text)
-        self.assertIn("Roblox", text)
+        self.assertIn("Godot", text)
         self.root = self.root / "client" / "Assets"
         text = self.context(self.start())
         self.assertIn("Unity", text)
-        self.assertNotIn("Roblox", text)
+        self.assertNotIn("Godot", text)
 
     def test_bad_input_fails_open(self):
         self.assertIsNone(self.run_hook("PreToolUse", {}, raw="not json"))
@@ -184,22 +163,21 @@ class Detection(HookCase):
 
 class BashGuards(HookCase):
     def test_publishing_is_denied_everywhere(self):
-        for cmd in ["rojo upload --asset_id 1", "cd build && steamcmd +login u +run_app_build app.vdf +quit",
-                    "butler push dist me/game:web", "mantle deploy", "rbxcloud experience publish -f g.rbxl",
-                    "xcrun altool --upload-app -f g.ipa", "sudo BuildPatchTool -mode=UploadBinary",
-                    "FOO=1 rojo upload"]:
+        for cmd in ["cd build && steamcmd +login u +run_app_build app.vdf +quit",
+                    "butler push dist me/game:web", "xcrun altool --upload-app -f g.ipa",
+                    "sudo BuildPatchTool -mode=UploadBinary", "FOO=1 butler push dist me/game:web"]:
             with self.subTest(cmd):
                 self.assertDenied(self.bash(cmd), "ask the user")
 
     def test_mentioning_a_publish_command_is_allowed(self):
-        for cmd in ['grep -n "rojo upload" README.md', "rojo build -o g.rbxl", "echo butler push",
-                    "steamcmd +login anonymous +quit", "rojo serve"]:
+        for cmd in ['grep -n "butler push" README.md', "butler status me/game", "echo butler push",
+                    "steamcmd +login anonymous +quit"]:
             with self.subTest(cmd):
                 self.assertAllowed(self.bash(cmd))
 
     def test_text_writes_into_binary_assets(self):
         for cmd in ["sed -i '' 's/a/b/' Content/Hero.uasset", "echo x > Maps/Main.umap",
-                    "perl -pi -e 's/a/b/' place.rbxl", "cat a | tee model.rbxm", "printf x >> scene.blend"]:
+                    "perl -pi -e 's/a/b/' Content/Level.umap", "cat a | tee model.blend", "printf x >> scene.blend"]:
             with self.subTest(cmd):
                 self.assertDenied(self.bash(cmd), "Binary engine assets")
         for cmd in ["cp Content/A.uasset Content/B.uasset", "sed -n 1p notes.txt", "git checkout -- Main.umap",
@@ -232,7 +210,7 @@ class BashGuards(HookCase):
 
     def test_outside_a_game_project_only_global_rules_apply(self):
         self.assertAllowed(self.bash("rm -rf Assets ProjectSettings"))
-        self.assertDenied(self.bash("rojo upload"))
+        self.assertDenied(self.bash("butler push dist me/game:web"))
 
     def test_unparsable_command(self):
         self.assertAllowed(self.bash("echo 'unterminated"))
@@ -242,7 +220,7 @@ class BashGuards(HookCase):
 class PatchGuards(HookCase):
     def test_binary_assets(self):
         self.assertDenied(self.patch("*** Update File: Content/Hero.uasset\n@@\n-a\n+b"), "binary")
-        self.assertDenied(self.patch("*** Add File: Place.rbxl\n+x"), "binary")
+        self.assertDenied(self.patch("*** Add File: scene.blend\n+x"), "binary")
         self.assertAllowed(self.patch("*** Delete File: Content/Old.uasset"))
 
     def test_generated_folders(self):
@@ -263,13 +241,6 @@ class PatchGuards(HookCase):
         self.assertIn("Move Player.cs.meta", self.context(moved))
         self.assertDenied(self.patch("*** Add File: Library/x.txt\n+x"), "Library")
         self.assertIn("Let Unity create it", self.context(self.patch("*** Add File: Assets/Scripts/New.cs.meta\n+guid: 1")))
-
-    def test_roblox_wally_packages(self):
-        make_roblox(self.root)
-        self.assertAllowed(self.patch("*** Add File: Packages/x.luau\n+x"))
-        write(self.root, "wally.toml", "[package]\n")
-        self.assertDenied(self.patch("*** Add File: Packages/x.luau\n+x"), "Packages")
-
 
 class PostChecks(HookCase):
     def post(self, rel: str, text: str):
@@ -316,39 +287,6 @@ class PostChecks(HookCase):
         make_godot(self.root, 3)
         self.assertIn("@onready is Godot 4 syntax", self.post("scripts/ok.gd", "@onready var a = 1\n"))
 
-    def test_roblox_luau_and_project(self):
-        make_roblox(self.root)
-        text = self.post("src/server/Main.server.luau",
-                         "local P = game.Players\nwait(1)\ntask.wait(1)\nlocal function wait(x) end\n-- spawn(f)\nfoo:delay(1)\n")
-        self.assertIn("Main.server.luau:1: warning: use game:GetService(\"Players\")", text)
-        self.assertIn("Main.server.luau:2: warning: wait() is deprecated", text)
-        self.assertEqual(text.count("warning"), 2, text)
-        self.assertIn("invalid JSON", self.post("default.project.json", "{ nope"))
-        missing = json.dumps({"name": "G", "tree": {"$className": "DataModel", "S": {"$path": "src/nowhere"}}}, indent=1)
-        self.assertIn("'src/nowhere' does not exist", self.post("default.project.json", missing))
-
-    def test_roblox_effect_value_types(self):
-        make_roblox(self.root)
-        text = self.post("src/server/Fx.server.luau", "\n".join([
-            'local fx = Instance.new("ParticleEmitter")',
-            "fx.Color = Color3.new(1, 0, 0)",
-            "fx.Lifetime = 2 -- seconds",
-            "fx.Rate = 20",
-            "fx.Size = NumberSequence.new(1)",
-            'local trail: Trail = Instance.new("Trail")',
-            "trail.Transparency = 0.5",
-            "trail.Lifetime = 0.3",
-            'print("fx.Color = Color3.new(1, 1, 1)") -- fx.Speed = 3',
-            'local fx = Instance.new("Sound")',
-            "fx.Color = 1",
-            'local beam = Instance.new("Beam")',
-            "local function tint(beam: Frame) beam.Color = Color3.new() end",  # a parameter, not the Beam
-        ]) + "\n")
-        self.assertIn("Fx.server.luau:2: error: ParticleEmitter.Color takes a ColorSequence, not a Color3", text)
-        self.assertIn("Fx.server.luau:3: error: ParticleEmitter.Lifetime takes a NumberRange, not a number", text)
-        self.assertIn("Fx.server.luau:7: error: Trail.Transparency takes a NumberSequence, not a number", text)
-        self.assertEqual(text.count(": error:"), 3, text)
-
     def test_non_engine_files_are_ignored(self):
         self.assertEqual(self.post("notes.md", "wait(1)"), "")
 
@@ -368,14 +306,9 @@ class StopGate(HookCase):
     def test_warnings_do_not_block(self):
         shutil.rmtree(self.root / ".git")
         subprocess.run(["git", "init", "-q", str(self.root)], check=True)
-        make_roblox(self.root)
-        write(self.root, "src/server/a.luau", "wait(1)\n")
+        make_unity(self.root)
+        write(self.root, "Assets/Scripts/Wrong.cs", "using UnityEngine;\nclass Player : MonoBehaviour {}\n")
         self.assertIsNone(self.run_hook("Stop", {"stop_hook_active": False}))
-
-
-def git(root: Path, *args: str) -> None:
-    subprocess.run(["git", "-C", str(root), "-c", "user.name=t", "-c", "user.email=t@example.com", *args],
-                   check=True, capture_output=True)
 
 
 class CreativeBrief(HookCase):
@@ -383,7 +316,7 @@ class CreativeBrief(HookCase):
         return self.run_hook("UserPromptSubmit", {"prompt": text})
 
     def test_game_requests_get_the_brief_anywhere(self):
-        for text in ("Make a roguelike about a lighthouse keeper", "build me an obby with 10 stages",
+        for text in ("Make a roguelike about a lighthouse keeper", "build me a tycoon with 10 upgrades",
                      "Can you create a small platformer game in one HTML file?"):
             self.assertIn("Creative brief", self.context(self.prompt(text)), text)
             self.assertEqual(self.prompt(text)["hookSpecificOutput"]["hookEventName"], "UserPromptSubmit")
@@ -393,85 +326,11 @@ class CreativeBrief(HookCase):
                      "make the log level configurable"):
             self.assertIsNone(self.prompt(text), text)
 
-    def test_roblox_guidance(self):
-        self.assertIn("Roblox:", self.context(self.prompt("build me an obby with 10 stages")))
-        self.assertNotIn("Roblox:", self.context(self.prompt("Make a roguelike about a lighthouse keeper")))
-        make_roblox(self.root)
-        self.assertIn("validates its arguments", self.context(self.prompt("add a new level with moving platforms")))
-        self.assertIsNone(self.prompt("rename the remote events"))
-
-    def test_roblox_polish_guidance(self):
-        self.assertIsNone(self.prompt("add particles to the coin pickup"))  # no Roblox context
-        out = self.context(self.prompt("make the Roblox shop UI feel juicier"))
-        self.assertIn("Roblox polish", out)
-        self.assertNotIn("Creative brief", out)
-        make_roblox(self.root)
-        out = self.context(self.prompt("add sparkles and a sound to the coin pickup"))
-        self.assertIn("effects-catalog.md", out)
-        self.assertIn("search_asset", out)
-        both = self.context(self.prompt("build a tycoon with satisfying button effects"))
-        self.assertIn("Creative brief", both)
-        self.assertIn("Roblox polish", both)
-        self.assertIsNone(self.prompt("why does the UI flicker?"))  # no creative verb
-
-    def test_roblox_story_guidance(self):
-        self.assertIsNone(self.prompt("write dialogue for the shopkeeper"))  # no Roblox context
-        out = self.context(self.prompt("write NPC dialogue for my Roblox hotel"))
-        self.assertIn("Roblox story", out)
-        make_roblox(self.root)
-        self.assertIn("story.py build", self.context(self.prompt("add a voiceover script for the intro cutscene")))
-        self.assertIn("story.py review", self.context(self.prompt("create character bios for the cast")))
-        self.assertIsNone(self.prompt("make the character jump higher"))  # the avatar, not a story
-        self.assertIsNone(self.prompt("write a script for the sliding door"))
-
     def test_level_words_count_only_in_a_game_project(self):
         self.assertIsNone(self.prompt("add a new level with moving platforms"))
         make_godot(self.root)
         self.assertIn("Creative brief", self.context(self.prompt("add a new level with moving platforms")))
         self.assertIsNone(self.prompt("fix the crash in level 2"))  # no creative verb
-
-
-class GitStopChecks(HookCase):
-    def setUp(self):
-        super().setUp()
-        shutil.rmtree(self.root / ".git")
-        git(self.root, "init", "-q")
-
-    def stop(self):
-        return self.run_hook("Stop", {"stop_hook_active": False})
-
-    def build_example(self) -> Path:
-        story = load_story()
-        docs = self.root / "docs" / "story"
-        shutil.copytree(STORY_EXAMPLE, docs)
-        make_roblox(self.root)
-        out = self.root / "src" / "shared" / "Dialogue.luau"
-        self.assertTrue(story.build(docs, out)["ok"])
-        return docs
-
-    def test_generated_dialogue_is_rebuilt_not_edited(self):
-        docs = self.build_example()
-        self.assertDenied(self.patch("*** Update File: src/shared/Dialogue.luau\n@@\n-a\n+b"), "story.py build")
-        self.assertIsNone(self.patch("*** Update File: docs/story/characters.md\n@@\n-a\n+b"))
-        git(self.root, "add", "-A")
-        git(self.root, "commit", "-qm", "init")
-        self.assertIsNone(self.stop(), "built and unchanged")
-        pip = docs / "dialogue" / "pier_kid.md"
-        pip.write_text(pip.read_text().replace("See you, Pip.", "Later, Pip."))
-        out = self.stop()
-        self.assertIn("src/shared/Dialogue.luau:1: error: built from", out["reason"])
-        self.assertTrue(load_story().build(docs, self.root / "src" / "shared" / "Dialogue.luau")["ok"])
-        self.assertIsNone(self.stop(), "rebuilt")
-
-    def test_docs_hash_matches_story_py(self):
-        sys.path.insert(0, str(HOOKS))
-        try:
-            import game_hooks
-        finally:
-            sys.path.pop(0)
-        self.assertEqual(game_hooks.docs_hash(STORY_EXAMPLE), load_story().docs_hash(STORY_EXAMPLE))
-        self.assertEqual(game_hooks.DIALOGUE_MARKER, load_story().MARKER.split(" Don't")[0])
-        self.assertIsNone(game_hooks.docs_hash(self.root))
 
 
 class Installer(unittest.TestCase):
@@ -532,7 +391,7 @@ class Installer(unittest.TestCase):
         cmd = self.config(self.home / "hooks.json")["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
         proc = subprocess.run(cmd, shell=True, input=json.dumps(
             {"hook_event_name": "PreToolUse", "cwd": str(self.tmp), "tool_name": "Bash",
-             "tool_input": {"command": "rojo upload"}}), capture_output=True, text=True)
+             "tool_input": {"command": "butler push dist me/game:web"}}), capture_output=True, text=True)
         self.assertEqual(json.loads(proc.stdout)["hookSpecificOutput"]["permissionDecision"], "deny")
 
 

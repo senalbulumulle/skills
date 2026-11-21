@@ -22,17 +22,16 @@ Skills here must work in Claude Code and Codex. Follow these rules for every cha
 
 ## Before committing
 
-Run all of these, and fix every failure (Luau and Rojo are needed for the Roblox checks):
+Run all of these, and fix every failure:
 
 ```sh
 tools/skills.py validate --strict
 uv run --with pyyaml python -m unittest discover -s tools
 node --test tools/test_game_assets.test.mjs tools/test_motion_components.test.mjs
-luau tools/luau/test_roblox_modules.luau
 uv run --python 3.12 --with mcp==2.3.0 python tools/mcp_smoke.py
 ```
 
-Every script or library added under a skill's `scripts/` or `assets/` needs tests in `tools/` (`test_game_scripts.py` for Python, `test_game_assets.test.mjs` for JavaScript, `luau/test_roblox_modules.luau` for Luau). Pure Luau modules must also pass `luau-analyze --mode=strict` (listed in the CI workflow).
+Every script or library added under a skill's `scripts/` or `assets/` needs tests in `tools/` (`test_game_scripts.py` for Python, `test_game_assets.test.mjs` for JavaScript).
 
 ## Hooks
 

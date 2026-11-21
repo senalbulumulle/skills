@@ -1,4 +1,0 @@
-interface:
-  display_name: "Roblox Narrative"
-  short_description: "Characters, NPC dialogue, and voiceover scripts built from Markdown"
-  default_prompt: "Use $roblox-narrative to write characters and NPC dialogue for my Roblox game and build them into the game."

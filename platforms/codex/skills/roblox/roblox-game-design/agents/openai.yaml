@@ -1,4 +1,0 @@
-interface:
-  display_name: "Roblox Game Design"
-  short_description: "Original Roblox concepts, first-minute hook, fair monetization"
-  default_prompt: "Use $roblox-game-design to plan an original Roblox experience and write a one-page brief."

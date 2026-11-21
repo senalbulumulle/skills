@@ -9,7 +9,6 @@ Skills are grouped by use case under `skills/<category>/`. Install everything, o
 | Category | What it covers | Skills |
 | --- | --- | --- |
 | [`game-dev`](skills/game-dev/README.md) | Engine-agnostic games: HTML5 canvas by default, adapts to Godot, Unity, or Phaser | `game-concept`, `game-prototype`, `game-feel`, `game-art`, `game-audio`, `game-ai`, `game-level-design`, `game-procgen`, `game-balance`, `game-playtest` |
-| [`roblox`](skills/roblox/README.md) | Roblox experiences in Luau with Rojo | `roblox-game-design`, `roblox-scripting`, `roblox-gameplay`, `roblox-narrative`, `roblox-playtest` |
 
 Run `tools/skills.py list` to see every skill with its summary.
 
@@ -33,7 +32,6 @@ Optional, only for the features that use them:
 - [Python](https://www.python.org/) 3.9 or newer: the scripts in some skills, and the Codex hooks and profile installers.
 - [Node.js](https://nodejs.org/): the browser playtest (`game-playtest`) and the HTML script check (`game-prototype`).
 - [Codex CLI](https://developers.openai.com/codex/cli): `scripts/codex/install-codex.sh` registers the MCP servers with it.
-- [Rojo](https://rojo.space) and [Luau](https://github.com/luau-lang/luau/releases): building the Roblox project template and type-checking Luau modules.
 
 ### Install
 
@@ -75,10 +73,10 @@ tools/skills.py install -p claude
 Install only some categories (repeat `-c` for more than one):
 
 ```sh
-tools/skills.py install -c roblox
+tools/skills.py install -c game-dev
 ```
 
-Installed skills keep their own names (`~/.claude/skills/roblox-scripting`, not `roblox/roblox-scripting`), so skill names are unique across categories.
+Installed skills keep their own names (`~/.claude/skills/game-feel`, not `game-dev/game-feel`), so skill names are unique across categories.
 
 ### Install into one project
 

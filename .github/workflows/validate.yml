@@ -4,10 +4,6 @@ on:
   push:
   pull_request:
 
-env:
-  LUAU_VERSION: "0.747"
-  ROJO_VERSION: "7.7.1"
-
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -23,31 +19,10 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - name: Install Luau and Rojo
-        run: |
-          mkdir -p "$HOME/.local/bin"
-          curl -fsSL -o /tmp/luau.zip "https://github.com/luau-lang/luau/releases/download/${LUAU_VERSION}/luau-ubuntu.zip"
-          curl -fsSL -o /tmp/rojo.zip "https://github.com/rojo-rbx/rojo/releases/download/v${ROJO_VERSION}/rojo-${ROJO_VERSION}-linux-x86_64.zip"
-          unzip -o /tmp/luau.zip -d "$HOME/.local/bin"
-          unzip -o /tmp/rojo.zip -d "$HOME/.local/bin"
-          chmod +x "$HOME/.local/bin/"*
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Test the validator and skill scripts
         run: uv run --with pyyaml python -m unittest discover -s tools -v
       - name: Test skill and motion-forge JavaScript
         run: node --test tools/test_game_assets.test.mjs tools/test_motion_components.test.mjs
-      - name: Type-check pure Luau modules
-        run: >
-          luau-analyze --mode=strict
-          skills/roblox/roblox-scripting/assets/rojo-template/src/server/RemoteGuard.luau
-          skills/roblox/roblox-scripting/assets/rojo-template/src/server/PlayerData.luau
-          skills/roblox/roblox-scripting/assets/rojo-template/src/shared/Config.luau
-          skills/roblox/roblox-scripting/assets/rojo-template/src/shared/Juice.luau
-          skills/roblox/roblox-gameplay/assets/RoundSystem.luau
-          skills/roblox/roblox-narrative/assets/DialogueRunner.luau
-          skills/roblox/roblox-narrative/assets/example/build/Dialogue.luau
-      - name: Test Luau modules
-        run: luau tools/luau/test_roblox_modules.luau
       - name: Smoke-test the MCP servers over stdio
         run: uv run --python 3.12 --with mcp==2.3.0 python tools/mcp_smoke.py
       - name: Validate skills

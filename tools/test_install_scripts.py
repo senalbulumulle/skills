@@ -95,8 +95,6 @@ class InstallScripts(unittest.TestCase):
         self.assertEqual(installed, SKILLS)
         for name in SKILLS:
             self.assertTrue((self.skills_dir() / name / "SKILL.md").is_file(), name)
-        # Codex variants come from dist/ and carry agents/openai.yaml.
-        self.assertTrue((self.skills_dir() / "roblox-scripting" / "agents" / "openai.yaml").is_file())
         hooks = self.hooks()
         self.assertEqual(sorted(hooks), ["PostToolUse", "PreToolUse", "SessionStart", "Stop", "UserPromptSubmit"])
         self.assertIn(mine, [h for g in hooks["Stop"] for h in g["hooks"]])
@@ -104,8 +102,7 @@ class InstallScripts(unittest.TestCase):
         profile = (self.codex_home / "game.config.toml").read_text()
         self.assertIn('model = "gpt-6-astra"', profile)
         self.assertEqual(sorted(p.name for p in (self.codex_home / "agents").iterdir()),
-                         ["game-critic.toml", "game-designer.toml", "my-role.toml", "narrative-designer.toml",
-                          "roblox-polisher.toml"])
+                         ["game-critic.toml", "game-designer.toml", "my-role.toml"])
         self.assertEqual(sorted(self.mcp()), ["motion-forge"])
         self.assertEqual(self.mcp()["motion-forge"]["args"], ["run", "--quiet", "--script", MOTION])
 
@@ -201,22 +198,6 @@ class InstallScripts(unittest.TestCase):
         proc = self.run_script("install-codex-mcp.sh", "-c", "web-dev")
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertEqual(self.mcp()["motion-forge"]["args"], ["run", "--quiet", "--script", MOTION])
-
-    def test_mcp_removes_retired_servers_from_this_checkout(self):
-        def stdio(path):
-            return {"type": "stdio", "command": "uv", "args": ["run", "--quiet", "--script", path]}
-        self.codex_home.mkdir(parents=True, exist_ok=True)
-        retired = stdio(str(REPO / "mcp" / "roblox" / "roblox-forge" / "server.py"))
-        (self.codex_home / "fake-mcp.json").write_text(json.dumps({"roblox-forge": retired}))
-        proc = self.run_script("install-codex-mcp.sh")
-        self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertIn("Removed the retired MCP server 'roblox-forge'", proc.stdout + proc.stderr)
-        self.assertEqual(sorted(self.mcp()), ["motion-forge"])
-        foreign = stdio("/elsewhere/roblox-forge/server.py")  # another checkout's server keeps its registration
-        (self.codex_home / "fake-mcp.json").write_text(json.dumps({"roblox-forge": foreign}))
-        proc = self.run_script("install-codex-mcp.sh", "--uninstall")
-        self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertEqual(self.mcp(), {"roblox-forge": foreign})
 
     def test_warns_when_codex_hooks_are_off(self):
         env = {**self.env, "FAKE_HOOKS": "false"}

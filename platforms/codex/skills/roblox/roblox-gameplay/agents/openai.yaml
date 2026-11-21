@@ -1,4 +1,0 @@
-interface:
-  display_name: "Roblox Gameplay"
-  short_description: "Server-authoritative mechanics, rounds, combat, NPCs, mobile UI"
-  default_prompt: "Use $roblox-gameplay to add a server-authoritative mechanic to my Roblox game."

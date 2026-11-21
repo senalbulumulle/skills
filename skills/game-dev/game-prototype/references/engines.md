@@ -10,7 +10,6 @@
 | `package.json` with `three`, `pixi.js`, `kaboom`/`kaplay`, or `excalibur` | that library |
 | `Cargo.toml` with `bevy` | Bevy |
 | `conf.lua` + `main.lua` | LÖVE |
-| `default.project.json` or `*.rbxlx` | Roblox (use the Roblox skills) |
 
 Use the engine's own idioms instead of the template; keep the same layer order and rules.
 
