@@ -26,7 +26,7 @@ Run all of these, and fix every failure (Luau and Rojo are needed for the Roblox
 ```sh
 tools/skills.py validate --strict
 uv run --with pyyaml python -m unittest discover -s tools
-node --test tools/test_game_assets.test.mjs
+node --test tools/test_game_assets.test.mjs tools/test_motion_components.test.mjs
 luau tools/luau/test_roblox_modules.luau
 uv run --python 3.12 --with mcp==2.3.0 python tools/mcp_smoke.py
 ```

@@ -2,15 +2,16 @@
 # Register this repo's MCP servers with Codex, globally ($CODEX_HOME/config.toml):
 #   creative-director  concept seeds, design review, unfinished-content scan (any engine)
 #   roblox-forge       Rojo project checks, remote map and audit, game-feel audit, odds, DataStore budget
+#   motion-forge       reusable Web Components for motion-rich web UI, showcase page, motion audit
 #
-#   scripts/codex/install-codex-mcp.sh               register both, or keep existing registrations
+#   scripts/codex/install-codex-mcp.sh               register all three, or keep existing registrations
 #   scripts/codex/install-codex-mcp.sh --uninstall   remove them, if they point at this checkout
 #
 # The servers run from this checkout through uv, so re-run this script if you move the repository.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_common.sh"
 
-SERVERS="creative-director roblox-forge"
+SERVERS="creative-director roblox-forge motion-forge"
 
 uninstall=0
 for arg in "$@"; do

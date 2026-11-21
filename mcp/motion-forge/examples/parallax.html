@@ -1,0 +1,15 @@
+<mf-parallax class="nl-par">
+  <div class="nl-par__sky" data-speed="0.75"></div>
+  <div class="nl-par__ridge nl-par__ridge--far" data-speed="0.88"></div>
+  <h2 class="nl-par__title" data-speed="0.94">Above the treeline</h2>
+  <div class="nl-par__ridge nl-par__ridge--near" data-speed="1.08"></div>
+</mf-parallax>
+<style>
+  .nl-par { height: min(80vh, 720px); border-radius: 24px; background: #030b10; }
+  .nl-par > * { position: absolute; inset-inline: 0; }
+  .nl-par__sky { inset-block: -30%; background: radial-gradient(60% 40% at 30% 35%, rgb(143 214 148 / .45), transparent 70%), radial-gradient(50% 35% at 72% 25%, rgb(31 122 109 / .55), transparent 70%), linear-gradient(#030b10, #0b2530); }
+  .nl-par__ridge { bottom: -20%; }
+  .nl-par__ridge--far { height: 70%; background: #0c2229; clip-path: polygon(0 45%, 12% 25%, 25% 40%, 38% 15%, 52% 35%, 66% 10%, 80% 30%, 100% 20%, 100% 100%, 0 100%); }
+  .nl-par__ridge--near { height: 50%; background: #050d10; clip-path: polygon(0 35%, 15% 55%, 30% 30%, 48% 50%, 62% 25%, 78% 45%, 100% 30%, 100% 100%, 0 100%); }
+  .nl-par__title { top: 32%; margin: 0; text-align: center; font-size: clamp(2rem, 6vw, 4.5rem); letter-spacing: -.02em; color: #e8f1ef; }
+</style>

@@ -1,0 +1,199 @@
+{
+  "categories": {
+    "webgl-3d": "WebGL and 3D",
+    "scroll-motion": "Scroll and motion graphics",
+    "tactile": "Tactile and micro-interactions",
+    "hero-text": "Expressive hero and text"
+  },
+  "components": [
+    {
+      "name": "shader-gradient",
+      "tag": "mf-shader-gradient",
+      "category": "webgl-3d",
+      "summary": "Slow, domain-warped WebGL color field for hero backgrounds; the field bends away from the pointer and content sits on top.",
+      "attributes": [
+        {"name": "colors", "default": "#0b1d26, #16425b, #2f6f73, #d9a05b, #f2e3c6", "description": "2 to 5 comma-separated hex colors, dark to light, blended along the field"},
+        {"name": "speed", "default": "0.35", "description": "Flow speed, 0 to 4"},
+        {"name": "grain", "default": "0.04", "description": "Film grain, 0 to 0.3; hides gradient banding"},
+        {"name": "pointer", "default": "on", "description": "off stops the field reacting to the pointer"}
+      ],
+      "css": [],
+      "data": [],
+      "api": ["::part(canvas) styles the canvas", "data-fallback is set when WebGL is unavailable and the CSS gradient shows instead"],
+      "notes": [
+        "Size the element yourself (min-height or aspect-ratio); the canvas fills it at up to 1.5x device pixels.",
+        "Pauses offscreen and in hidden tabs, draws one still frame under prefers-reduced-motion, and recovers from a lost WebGL context.",
+        "Use one per view: every instance holds its own WebGL context, and browsers allow about 16."
+      ]
+    },
+    {
+      "name": "tilt-card",
+      "tag": "mf-tilt-card",
+      "category": "webgl-3d",
+      "summary": "Card that tilts toward the pointer in 3D on a spring, with a moving glare and inner layers that rise toward the viewer.",
+      "attributes": [
+        {"name": "max", "default": "8", "description": "Largest tilt in degrees, 0 to 30"},
+        {"name": "scale", "default": "1.03", "description": "Scale while active, 1 to 1.2"},
+        {"name": "glare", "default": "absent", "description": "Boolean; adds a highlight that follows the pointer"}
+      ],
+      "css": [
+        {"name": "--mf-tilt-perspective", "default": "900px", "description": "Perspective distance; smaller is more dramatic"},
+        {"name": "--mf-tilt-glare-strength", "default": ".3", "description": "Peak glare opacity"}
+      ],
+      "data": [
+        {"name": "data-depth", "description": "On elements inside: pixels the element rises toward the viewer while the card is active"}
+      ],
+      "api": ["refresh() re-reads data-depth elements after you add them", "::part(card) and ::part(glare)"],
+      "notes": [
+        "Style the visible card on a child element (the example uses an article); the component rotates a wrapper around it.",
+        "Ancestors of data-depth elements get transform-style: preserve-3d. overflow other than visible on those ancestors flattens the depth.",
+        "Mouse and pen only, so touch scrolling is never captured; keyboard focus lifts the card without tilting it."
+      ]
+    },
+    {
+      "name": "parallax",
+      "tag": "mf-parallax",
+      "category": "scroll-motion",
+      "summary": "Layered scroll parallax: each layer moves at its own speed, resting where you laid it out when the section is centered.",
+      "attributes": [],
+      "css": [],
+      "data": [
+        {"name": "data-speed", "description": "On layers: 1 scrolls normally, 0.5 at half speed (far), 0 stays put, above 1 moves faster (near)"},
+        {"name": "data-speed-x", "description": "On layers: sideways drift in pixels per scrolled pixel; positive drifts right as you scroll down"}
+      ],
+      "api": [],
+      "notes": [
+        "Layers move with the translate property, so their own transform is kept.",
+        "The section clips its layers (overflow: clip, or hidden in older browsers). Make slow background layers taller than the section (for example inset-block: -30%) so no edge shows.",
+        "Listens to scroll only while the section is near the viewport; layers stay still under prefers-reduced-motion."
+      ]
+    },
+    {
+      "name": "scroll-scene",
+      "tag": "mf-scroll-scene",
+      "category": "scroll-motion",
+      "summary": "Pinned, scroll-scrubbed stage for motion graphics: CSS reads --mf-progress (0 to 1) and each part's own --mf-p.",
+      "attributes": [
+        {"name": "length", "default": "3", "description": "Scene height in viewports (at least 1); the stage stays pinned for length minus 1 of them"},
+        {"name": "reduced-progress", "default": "1", "description": "Progress shown, unpinned, under prefers-reduced-motion"}
+      ],
+      "css": [
+        {"name": "--mf-progress", "default": "0", "description": "Set on the scene: how far through it the reader has scrolled, 0 to 1"},
+        {"name": "--mf-p", "default": "0", "description": "Set on each element with data-start or data-end: progress inside that element's window, 0 to 1"}
+      ],
+      "data": [
+        {"name": "data-start", "description": "Scene progress (0 to 1) where this element's --mf-p starts rising; default 0"},
+        {"name": "data-end", "description": "Scene progress where this element's --mf-p reaches 1; default 1"}
+      ],
+      "api": ["progress (read-only property)", "mf-progress event with detail.progress, fired when progress changes", "::part(stage)"],
+      "notes": [
+        "Drive motion in CSS with calc() on opacity, translate, scale, rotate, or clip-path, for example translate: 0 calc(var(--mf-p) * -40vh).",
+        "Write a prefers-reduced-motion rule that shows the whole scene statically; the example stacks its steps.",
+        "An ancestor with overflow other than visible breaks position: sticky, and the stage stops pinning."
+      ]
+    },
+    {
+      "name": "reveal",
+      "tag": "mf-reveal",
+      "category": "scroll-motion",
+      "summary": "Reveals its children one after another as they scroll into view: rise, fade, scale, blur, or clip.",
+      "attributes": [
+        {"name": "effect", "default": "rise", "description": "rise, fade, scale, blur, or clip"},
+        {"name": "stagger", "default": "80", "description": "Milliseconds between children; children past the twelfth share the last delay"},
+        {"name": "duration", "default": "700", "description": "Milliseconds per child"},
+        {"name": "repeat", "default": "absent", "description": "Boolean; hides again when scrolled back above, so it replays"}
+      ],
+      "css": [
+        {"name": "--mf-reveal-duration", "default": "700ms", "description": "Transition duration (the duration attribute sets it)"},
+        {"name": "--mf-reveal-ease", "default": "cubic-bezier(.2, .7, .2, 1)", "description": "Transition timing function"}
+      ],
+      "data": [],
+      "api": [],
+      "notes": [
+        "Only direct children animate; wrap groups that should move together.",
+        "Hidden children stay in the accessibility tree and print visible.",
+        "Load the script in the head so content above the fold doesn't show once before it hides and reveals."
+      ]
+    },
+    {
+      "name": "magnetic",
+      "tag": "mf-magnetic",
+      "category": "tactile",
+      "summary": "Pulls a button toward a nearby pointer on a spring and presses it in on click.",
+      "attributes": [
+        {"name": "strength", "default": "0.35", "description": "Fraction of the pointer's distance from center to follow, 0 to 1"},
+        {"name": "radius", "default": "60", "description": "Pixels outside the element where the pull starts"}
+      ],
+      "css": [],
+      "data": [],
+      "api": [],
+      "notes": [
+        "Wrap exactly one button or link; the wrapper moves, so the focus ring moves with it.",
+        "Pulls only on devices that hover with a fine pointer, and only while visible. The press stays under prefers-reduced-motion; the pull does not.",
+        "Moves with the translate and scale properties, so the child's own transform is kept."
+      ]
+    },
+    {
+      "name": "spotlight",
+      "tag": "mf-spotlight",
+      "category": "tactile",
+      "summary": "One light follows the pointer across a group of cards, lighting each card's border and surface as it passes.",
+      "attributes": [],
+      "css": [
+        {"name": "--mf-spotlight-color", "default": "rgb(255 255 255 / .55)", "description": "Border light color"},
+        {"name": "--mf-spotlight-fill", "default": "rgb(255 255 255 / .06)", "description": "Surface light color"},
+        {"name": "--mf-spotlight-size", "default": "280px", "description": "Light radius"},
+        {"name": "--mf-spotlight-border", "default": "1px", "description": "Lit border width"}
+      ],
+      "data": [],
+      "api": [],
+      "notes": [
+        "Each direct child is a card: it gets position: relative, and its ::before and ::after are used for the light.",
+        "Give cards a border-radius; the light follows it.",
+        "Keyboard focus lights the focused card from its center. Touch is ignored."
+      ]
+    },
+    {
+      "name": "text-scramble",
+      "tag": "mf-text-scramble",
+      "category": "hero-text",
+      "summary": "Text that decodes from shuffling glyphs into its real words, roughly left to right.",
+      "attributes": [
+        {"name": "trigger", "default": "visible", "description": "visible (once, when 60% in view), load, or hover (also on keyboard focus)"},
+        {"name": "duration", "default": "900", "description": "Milliseconds for the whole decode"},
+        {"name": "glyphs", "default": "!<>-_\\/[]{}=+*^?#%&", "description": "Characters to shuffle through; match the font (digits for numbers, katakana for a Japanese face)"}
+      ],
+      "css": [],
+      "data": [],
+      "api": ["text property: set it to decode into new text", "play() runs the decode again", "::part(text) and ::part(glyphs)"],
+      "notes": [
+        "Plain text only; markup inside is flattened to its text.",
+        "Screen readers and copy-paste get the real text, and the element keeps the final text's size while it runs.",
+        "Glyph widths differ in proportional fonts; a monospace font gives the steadiest effect."
+      ]
+    },
+    {
+      "name": "split-text",
+      "tag": "mf-split-text",
+      "category": "hero-text",
+      "summary": "Splits a headline into letters or words that rise, fade, or unblur into place one after another.",
+      "attributes": [
+        {"name": "by", "default": "chars", "description": "chars or words"},
+        {"name": "effect", "default": "rise", "description": "rise (slides up from a mask), fade, or blur"},
+        {"name": "stagger", "default": "30 (chars), 70 (words)", "description": "Milliseconds between units; shortened so the last unit starts within 1.2 s"},
+        {"name": "duration", "default": "800", "description": "Milliseconds per unit"},
+        {"name": "repeat", "default": "absent", "description": "Boolean; hides again when scrolled back above, so it replays"}
+      ],
+      "css": [
+        {"name": "--mf-split-ease", "default": "cubic-bezier(.2, .8, .2, 1)", "description": "Transition timing function"}
+      ],
+      "data": [],
+      "api": ["play() hides the text and reveals it again", "::part(text)"],
+      "notes": [
+        "Put it inside the heading element, not around it, so the heading keeps its role.",
+        "Letters are split by grapheme, so emoji and accented letters stay whole; words never break across lines.",
+        "Splitting letters drops kerning between them; use by=\"words\" for body-size text."
+      ]
+    }
+  ]
+}

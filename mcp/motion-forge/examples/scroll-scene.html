@@ -1,0 +1,18 @@
+<mf-scroll-scene class="nl-scene" length="3">
+  <div class="nl-scene__stage">
+    <p class="nl-scene__step" data-start="0" data-end="0.33">The sun sinks 6° below the horizon.</p>
+    <p class="nl-scene__step" data-start="0.33" data-end="0.66">Solar wind reaches Earth's magnetic field.</p>
+    <p class="nl-scene__step" data-start="0.66" data-end="1">Oxygen glows green at 100 km.</p>
+    <div class="nl-scene__bar"></div>
+  </div>
+</mf-scroll-scene>
+<style>
+  .nl-scene__stage { position: relative; display: grid; place-items: center; height: 100%; padding: 2rem; background: radial-gradient(80% 60% at 50% 100%, #0d3b4f, #030b10); color: #e8f1ef; }
+  .nl-scene__step { grid-area: 1 / 1; max-width: 18ch; margin: 0; text-align: center; font-size: clamp(1.75rem, 5vw, 3.5rem); line-height: 1.1;
+    opacity: min(1, calc(var(--mf-p, 0) * 4), calc((1 - var(--mf-p, 0)) * 4)); translate: 0 calc((.5 - var(--mf-p, 0)) * 4rem); }
+  .nl-scene__bar { position: absolute; inset: auto 2rem 2rem; height: 2px; background: #8fd694; transform-origin: left; scale: var(--mf-progress, 0) 1; }
+  @media (prefers-reduced-motion: reduce) {
+    .nl-scene__stage { gap: 2rem; padding-block: 4rem 6rem; }
+    .nl-scene__step { grid-area: auto; opacity: 1; translate: none; }
+  }
+</style>

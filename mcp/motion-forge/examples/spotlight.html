@@ -1,0 +1,13 @@
+<mf-spotlight class="nl-sites">
+  <button class="nl-sites__card" type="button"><strong>Skibotn</strong><span>47 km · clear until 01:00</span></button>
+  <button class="nl-sites__card" type="button"><strong>Lyngen</strong><span>74 km · visible from Kp 4</span></button>
+  <button class="nl-sites__card" type="button"><strong>Kvaløya</strong><span>21 km · coastal cloud risk</span></button>
+  <button class="nl-sites__card" type="button"><strong>Senja</strong><span>120 km · darkest sky</span></button>
+</mf-spotlight>
+<style>
+  .nl-sites { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; --mf-spotlight-color: rgb(143 214 148 / .8); }
+  .nl-sites__card { display: grid; gap: .4rem; padding: 24px; border: 1px solid rgb(255 255 255 / .07); border-radius: 16px; background: #0b1d24; color: #e8f1ef; font: inherit; text-align: left; cursor: pointer; }
+  .nl-sites__card strong { font-size: 1.25rem; }
+  .nl-sites__card span { color: #a9bfba; font-size: .9rem; }
+  .nl-sites__card:focus-visible { outline: 2px solid #8fd694; outline-offset: 2px; }
+</style>

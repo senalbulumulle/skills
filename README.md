@@ -67,7 +67,7 @@ tools/skills.py install --project /path/to/project
 scripts/codex/install-codex.sh
 ```
 
-Run `scripts/codex/install-codex.sh --help` to see the options. For MCP setup in Claude Code, see `mcp/creative-director/README.md` and `mcp/roblox-forge/README.md`.
+Run `scripts/codex/install-codex.sh --help` to see the options. For MCP setup in Claude Code, see `mcp/creative-director/README.md`, `mcp/roblox-forge/README.md`, and `mcp/motion-forge/README.md` (which also covers Gemini CLI).
 
 ### Uninstall
 

@@ -20,6 +20,8 @@ EXPECTED = {"create_project", "check_project", "map_remotes", "audit_remotes", "
 EXAMPLE_DOCS = MCP.parent / "skills" / "roblox-narrative" / "assets" / "example" / "docs"
 DIRECTOR = MCP / "creative-director" / "server.py"
 DIRECTOR_TOOLS = {"concept_seeds", "review_design", "find_slop"}
+MOTION = MCP / "motion-forge" / "server.py"
+MOTION_TOOLS = {"list_components", "get_component", "install_components", "build_showcase", "audit_motion"}
 
 
 def payload(result):
@@ -104,9 +106,37 @@ async def creative_director():
             print(f"creative-director smoke test passed: {len(tools)} tools")
 
 
+async def motion_forge():
+    async with stdio_client(launch(MOTION)) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            tools = {t.name: t for t in (await session.list_tools()).tools}
+            assert MOTION_TOOLS <= set(tools), f"missing tools: {MOTION_TOOLS - set(tools)}"
+            assert tools["audit_motion"].annotations.read_only_hint is True
+            assert tools["install_components"].annotations.read_only_hint is False
+
+            count = len(payload(await session.call_tool("list_components", {}))["components"])
+            listed = payload(await session.call_tool("list_components", {"category": "hero-text"}))
+            assert [c["name"] for c in listed["components"]] == ["text-scramble", "split-text"], listed
+            component = payload(await session.call_tool("get_component", {"name": "parallax"}))
+            assert component["ok"] and "data-speed" in component["example"] and "class Parallax" in component["source"]
+            with tempfile.TemporaryDirectory() as tmp:
+                installed = payload(await session.call_tool("install_components", {"names": ["all"], "out": tmp}))
+                assert installed["ok"] and len(installed["files"]) == count, installed
+                page = payload(await session.call_tool("build_showcase", {"out": tmp}))
+                assert page["ok"] and page["hero"], page
+                audit = payload(await session.call_tool("audit_motion", {"paths": [tmp]}))
+                assert audit["ok"] and audit["files"] == count + 1 and not audit["findings"], audit  # modules + showcase
+                (Path(tmp) / "bad.css").write_text(".a { transition: all .2s; }\n")
+                bad = payload(await session.call_tool("audit_motion", {"paths": [tmp]}))
+                assert not bad["ok"] and bad["findings"][0]["rule"] == "transition-all", bad
+            print(f"motion-forge smoke test passed: {len(tools)} tools, {count} components")
+
+
 async def main():
     await roblox_forge()
     await creative_director()
+    await motion_forge()
 
 
 if __name__ == "__main__":

@@ -20,6 +20,7 @@ jobs:
             tools/skills.py
             mcp/roblox-forge/server.py
             mcp/creative-director/server.py
+            mcp/motion-forge/server.py
             .github/workflows/validate.yml
       - uses: actions/setup-node@v7
         with:
@@ -35,8 +36,8 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Test the validator and skill scripts
         run: uv run --with pyyaml python -m unittest discover -s tools -v
-      - name: Test skill JavaScript libraries
-        run: node --test tools/test_game_assets.test.mjs
+      - name: Test skill and motion-forge JavaScript
+        run: node --test tools/test_game_assets.test.mjs tools/test_motion_components.test.mjs
       - name: Type-check pure Luau modules
         run: >
           luau-analyze --mode=strict
@@ -49,7 +50,7 @@ jobs:
           skills/roblox-narrative/assets/example/build/Dialogue.luau
       - name: Test Luau modules
         run: luau tools/luau/test_roblox_modules.luau
-      - name: Smoke-test the roblox-forge MCP server over stdio
+      - name: Smoke-test the MCP servers over stdio
         run: uv run --python 3.12 --with mcp==2.3.0 python tools/mcp_smoke.py
       - name: Validate skills
         run: tools/skills.py validate --strict
