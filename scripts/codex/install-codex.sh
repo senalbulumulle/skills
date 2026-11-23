@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 # Install everything this repo provides for Codex, globally on this device:
-#   skills   -> ~/.agents/skills/                                  (scripts/codex/install-codex-skills.sh)
-#   profile  -> $CODEX_HOME/game.config.toml and agents/ roles     (scripts/codex/install-codex-profile.sh)
+#   skills   -> ~/.agents/skills/                       (scripts/codex/install-codex-skills.sh)
 #   mcp      -> MCP servers in mcp/<category>/<name>/   (scripts/codex/install-codex-mcp.sh)
 #
-#   scripts/codex/install-codex.sh                      all three
-#   scripts/codex/install-codex.sh --only skills,mcp  just the ones listed
+#   scripts/codex/install-codex.sh               both
+#   scripts/codex/install-codex.sh --only mcp    just the ones listed
 #
 # Safe to re-run: it updates what it installed before and leaves everything else alone.
 # Undo with scripts/codex/uninstall-codex.sh.
@@ -16,7 +15,7 @@ select_components "${BASH_SOURCE[0]}" "$@"
 
 # Check every requirement first, so a missing tool can't leave a half-finished install.
 if selected skills || selected mcp; then need_uv; fi
-if selected profile || selected mcp; then need_python39; fi
+if selected mcp; then need_python39; fi
 if selected mcp; then need_codex; fi
 
 # One step failing (for example a skill folder that already exists and isn't ours) doesn't stop the others.

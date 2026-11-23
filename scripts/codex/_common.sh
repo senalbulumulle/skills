@@ -21,7 +21,7 @@ need_codex() { need codex "Install Codex first."; }
 
 # Parse the options shared by install-codex.sh and uninstall-codex.sh into SELECTED, a space-separated
 # list of components. Usage: select_components SCRIPT_PATH "$@"
-ALL_COMPONENTS="skills profile mcp"
+ALL_COMPONENTS="skills mcp"
 select_components() {
   local script="$1" only="" name
   shift

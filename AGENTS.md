@@ -27,17 +27,17 @@ Run all of these, and fix every failure:
 ```sh
 tools/skills.py validate --strict
 uv run --with pyyaml python -m unittest discover -s tools
-node --test tools/test_game_assets.test.mjs tools/test_motion_components.test.mjs
+node --test tools/*.test.mjs
 uv run --python 3.12 --with mcp==2.3.0 python tools/mcp_smoke.py
 ```
 
-Every script or library added under a skill's `scripts/` or `assets/` needs tests in `tools/` (`test_game_scripts.py` for Python, `test_game_assets.test.mjs` for JavaScript).
+Every script or library added under a skill's `scripts/` or `assets/` needs tests in `tools/` (`test_<name>.py` for Python, `test_<name>.test.mjs` for JavaScript).
 
-## Hooks
+## Codex tooling
 
 A Codex hook may use only the outputs the installed Codex accepts: check with `platforms/codex/hooks/discover.py`, and save a new snapshot when Codex changes.
 
-The Codex `game` profile and agent roles live in `platforms/codex/profile/`. After a Codex update, save a model snapshot with `platforms/codex/models/export_models.py --json`; it records structure only, never OpenAI's instruction text.
+After a Codex update, save a model snapshot with `platforms/codex/models/export_models.py --json`; it records structure only, never OpenAI's instruction text.
 
 ## Harnesses
 

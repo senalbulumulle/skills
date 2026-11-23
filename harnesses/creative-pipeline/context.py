@@ -152,6 +152,8 @@ class SkillIndex:
         self.by_name = {s.name: s for s in skills}
 
     def index_text(self) -> str:
+        if not self.skills:
+            return ""
         return "Available skills (name: when to use):\n" + "\n".join(s.index_line for s in self.skills)
 
     def score(self, skill: Skill, task: str) -> float:

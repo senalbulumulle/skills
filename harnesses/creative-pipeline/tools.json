@@ -28,7 +28,7 @@
       "name": "read_skill_reference",
       "description": "Read a reference file from one of this repo's skills, such as tuning numbers or examples.",
       "parameters": {"type": "object", "properties": {
-        "skill": {"type": "string", "description": "Skill name, for example game-feel."},
+        "skill": {"type": "string", "description": "The skill's name, as in its SKILL.md frontmatter."},
         "file": {"type": "string", "description": "Path inside the skill folder, for example references/tuning.md."}},
         "required": ["skill", "file"]}
     }

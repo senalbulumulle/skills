@@ -36,6 +36,39 @@ def rules_hit(report):
     return {v["rule"] for v in report["violations"]}
 
 
+# Fixture skills in the repo's layout (skills/<category>/<name>/SKILL.md), so these tests don't depend on
+# which skills the repo ships.
+FIXTURE_SKILLS = {
+    "motion-polish": ("Add motion and micro-interactions to a working web page, starting with hover and focus "
+                      "states, then scroll reveals and page transitions. Use when a page feels static, flat, or "
+                      "lifeless, or when asked to animate, add hover effects, or polish interactions.",
+                      "# Motion Polish\n\n## Steps\n\n1. List every interactive element.\n2. Add one effect at a time.\n",
+                      "## Hover\n\n- **Generic:** every card scales to 1.1.\n- **Specific:** only the primary card lifts 4px.\n\n"
+                      "## Reveal\n\n- **Generic:** everything fades in.\n- **Specific:** the headline settles first.\n\n"
+                      "## Loading\n\n- **Generic:** a spinner.\n- **Specific:** the timetable rows fill in order.\n"),
+    "page-copy": ("Write the copy for a landing page, with a headline, one supporting line, and calls to action. "
+                  "Use when a page needs a headline, tagline, button labels, or marketing copy.",
+                  "# Page Copy\n\n## Steps\n\n1. Name the reader.\n", None),
+    "data-tables": ("Build sortable, readable data tables. Use when showing timetables, prices, or other rows of data.",
+                    "# Data Tables\n\n## Steps\n\n1. Pick the columns.\n", None),
+}
+
+
+def write_fixture_skills(root: Path) -> Path:
+    for name, (description, body, anchors) in FIXTURE_SKILLS.items():
+        folder = root / "web-dev" / name
+        (folder / "references").mkdir(parents=True)
+        meta = '\nmetadata:\n  anchors: "references/examples.md"' if anchors else ""
+        (folder / "SKILL.md").write_text(f"---\nname: {name}\ndescription: {description}{meta}\n---\n\n{body}")
+        if anchors:
+            (folder / "references" / "examples.md").write_text(f"# Taste anchors\n\n{anchors}")
+    return root
+
+
+def fixture_index(tmp: Path) -> "context.SkillIndex":
+    return context.SkillIndex(context.discover_skills([write_fixture_skills(tmp / "skills")]))
+
+
 class TempCase(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
@@ -67,7 +100,7 @@ class TempCase(unittest.TestCase):
 class Gate(unittest.TestCase):
     def test_catches_stock_vocabulary_templates_and_openers(self):
         text = ("We delve into a rich tapestry of ideas. This is a testament to a crucial shift in the landscape.\n\n"
-                "It's not just a tool, it's a movement. More than just a game.\n")
+                "It's not just a tool, it's a movement. More than just a timetable.\n")
         hit = rules_hit(gate.check({"notes.md": text}, "Great question! Here it is."))
         for rule in ("vocab-delve", "vocab-tapestry", "vocab-testament", "vocab-crucial", "vocab-landscape",
                      "template-not-just", "template-more-than", "opener-sycophantic"):
@@ -89,10 +122,10 @@ class Gate(unittest.TestCase):
 
     def test_exemptions_and_scopes(self):
         ok = {"notes.md": "Rotate the phone to landscape mode. The TODO list lives in TASKS.md.",
-              "game.js": 'const label = "Score";  // tuned in playtest 3\n'}
+              "app.js": 'const label = "Departures";  // renamed after user test 3\n'}
         self.assertTrue(gate.check(ok)["passed"], gate.check(ok)["violations"])
-        self.assertIn("code-stub", rules_hit(gate.check({"game.js": "function jump() {}  // TODO\n"})))
-        self.assertIn("vocab-crucial", rules_hit(gate.check({"game.js": 'alert("A crucial choice awaits");\n'})))
+        self.assertIn("code-stub", rules_hit(gate.check({"app.js": "function book() {}  // TODO\n"})))
+        self.assertIn("vocab-crucial", rules_hit(gate.check({"app.js": 'alert("A crucial choice awaits");\n'})))
 
     def test_cadence(self):
         monotone = " ".join(["The ferry leaves the dock at dawn."] * 3 + ["The water rises over the quay wall."] * 3)
@@ -124,7 +157,7 @@ class Gate(unittest.TestCase):
     def test_structure(self):
         schema = pipeline.load_steps()["schemas"]["audit"]
         good = {"summary": "It runs and the copy fits.", "findings": [
-            {"severity": "dull", "problem": "No sound on win", "where": "game.js:40", "fixed": True}]}
+            {"severity": "dull", "problem": "No focus style on Book", "where": "app.js:40", "fixed": True}]}
         self.assertEqual(gate.check_structure(good, schema), [])
         bad = {"summary": "x", "findings": [{"severity": "meh", "problem": "No", "where": 3, "fixed": "yes"}]}
         hints = " ".join(p["hint"] for p in gate.check_structure(bad, schema))
@@ -141,7 +174,9 @@ class Gate(unittest.TestCase):
 
 class Context(unittest.TestCase):
     def setUp(self):
-        self.index = context.SkillIndex(context.discover_skills())
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.index = fixture_index(self.tmp)
 
     def test_frontmatter_subset(self):
         meta, body = context.parse_frontmatter('---\nname: x\ndescription: "A thing. Use when y."\n'
@@ -151,27 +186,29 @@ class Context(unittest.TestCase):
         self.assertEqual(body, "# Body\n")
 
     def test_index_tier_is_small(self):
-        self.assertGreaterEqual(len(self.index.skills), 10)
+        self.assertEqual([s.name for s in self.index.skills], ["data-tables", "motion-polish", "page-copy"])
         per_skill = context.estimate_tokens(self.index.index_text()) / len(self.index.skills)
         self.assertLessEqual(per_skill, 30)
         for s in self.index.skills:
             self.assertNotIn("Use when", s.index_line)
+        self.assertEqual(self.index.by_name["motion-polish"].trigger, "Add motion and micro-interactions to a working web page")
+        self.assertEqual(context.SkillIndex([]).index_text(), "")
 
     def test_matching_and_forcing(self):
-        names = [s.name for s in self.index.match("the jump feels floaty; add screen shake and juice", 1)]
-        self.assertEqual(names, ["game-feel"])
-        names = [s.name for s in self.index.match("balance the XP curve and drop rates", 2)]
-        self.assertEqual(names[0], "game-balance")
+        names = [s.name for s in self.index.match("the page feels static; add hover effects and animate it", 1)]
+        self.assertEqual(names, ["motion-polish"])
+        names = [s.name for s in self.index.match("show the ferry timetables and prices", 2)]
+        self.assertEqual(names[0], "data-tables")
         self.assertEqual(self.index.match("quarterly tax filing", 2), [])
-        self.assertEqual([s.name for s in self.index.match("anything", 2, force=["game-audio"])][0], "game-audio")
+        self.assertEqual([s.name for s in self.index.match("anything", 2, force=["page-copy"])][0], "page-copy")
 
     def test_execution_tier_has_body_and_anchors(self):
-        feel = self.index.by_name["game-feel"]
-        text = feel.execution_text(2)
+        motion = self.index.by_name["motion-polish"]
+        text = motion.execution_text(2)
         self.assertIn("## Steps", text)
         self.assertIn("Taste anchors", text)
-        self.assertEqual(len(feel.anchors(5)), 3)
-        self.assertEqual(self.index.by_name["game-ai"].anchors(3), [])
+        self.assertEqual(len(motion.anchors(5)), 3)
+        self.assertEqual(self.index.by_name["page-copy"].anchors(3), [])
 
     def test_compiler_drops_by_priority_and_enforces_the_budget(self):
         sections = [context.Section("persona", "p" * 400, 0), context.Section("skill", "s" * 400, 2),
@@ -292,15 +329,15 @@ class Lifecycle(TempCase):
     def test_pre_prompt_includes_lessons_and_reports_savings(self):
         steps = pipeline.load_steps()["steps"]
         draft = next(s for s in steps if s["id"] == "draft")
-        index, registry = context.SkillIndex(context.discover_skills()), context.load_tools()
+        index, registry = fixture_index(self.tmp), context.load_tools()
         state = {"rule_counts": {"placeholder-company": 3}, "rule_hints": {"placeholder-company": "Invent a name."}}
         ctx = lifecycle.default_hooks().emit("onPrePrompt", {
             "step": draft, "index": index, "registry": registry, "state": state,
-            "values": {"brief": "Polish the jump feel with screen shake", "directions": "d"},
+            "values": {"brief": "The page feels static; add hover effects", "directions": "d"},
             "baseline": pipeline.baseline(index, registry, steps)})
         self.assertIn("placeholder-company", ctx["compiled"].text)
-        self.assertIn("game-feel", ctx["skills"])
-        self.assertIn("Taste anchor (game-feel)", ctx["compiled"].text)
+        self.assertIn("motion-polish", ctx["skills"])
+        self.assertIn("Taste anchor (motion-polish)", ctx["compiled"].text)
         t = ctx["telemetry"]
         self.assertGreater(t["saved_tokens"], 0)
         self.assertLessEqual(t["total_tokens"], draft["budget"])
@@ -379,7 +416,7 @@ FAKE_CLAUDE = textwrap.dedent(f"""\
     first = "--session-id" in args
     session = args[args.index("--session-id" if first else "--resume") + 1]
     with open("index.html", "w") as f:
-        f.write("<title>My Game</title><p>Acme Corp</p>" if first else "<title>Tidelock</title><p>Get the ferry out.</p>")
+        f.write("<title>My Website</title><p>Acme Corp</p>" if first else "<title>Tidelock Ferries</title><p>Book before the tide turns.</p>")
     with open("PIPELINE.md", "w") as f:
         f.write("Picked Tidelock: the tide is a clock.\\n")
     print(json.dumps({{"type": "result", "result": "built it" + (" (push denied)" if "deny" in denied else ""),
@@ -429,7 +466,7 @@ class EndToEnd(TempCase):
         self.assertIn('"passed": false', retry)
         self.assertIn("placeholder-company", retry)
         # The draft prompt got the brainstorm's directions.
-        self.assertIn("Moth Post", (run_dir / "logs" / "draft.1.prompt.md").read_text())
+        self.assertIn("Harbor Board", (run_dir / "logs" / "draft.1.prompt.md").read_text())
         # Work landed on the run's branch only; the user's checkout and branches are untouched.
         branch = report["branch"]
         self.assertIn("Tidelock", git(repo, "show", f"{branch}:index.html"))

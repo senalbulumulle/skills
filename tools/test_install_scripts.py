@@ -25,11 +25,7 @@ FAKE_CODEX = textwrap.dedent(f"""\
     state = Path(os.environ["CODEX_HOME"]) / "fake-mcp.json"
     servers = json.loads(state.read_text()) if state.is_file() else {{}}
     args = sys.argv[1:]
-    if args[:2] == ["debug", "models"]:
-        print(json.dumps({{"models": [
-            {{"slug": "gpt-6-luna", "visibility": "list", "supported_reasoning_levels": [{{"effort": "high"}}]}},
-            {{"slug": "gpt-6-astra", "visibility": "list", "supported_reasoning_levels": [{{"effort": "high"}}]}}]}}))
-    elif args[:2] == ["mcp", "get"]:
+    if args[:2] == ["mcp", "get"]:
         if args[2] not in servers:
             sys.exit(1)
         print(json.dumps({{"name": args[2], "transport": servers[args[2]]}}))
@@ -76,9 +72,6 @@ class InstallScripts(unittest.TestCase):
     def test_install_everything_then_uninstall(self):
         other = self.skills_dir() / "someone-elses"
         other.mkdir(parents=True)
-        my_role = self.codex_home / "agents" / "my-role.toml"
-        my_role.parent.mkdir(parents=True)
-        my_role.write_text('name = "my-role"\n')
 
         for _ in range(2):  # re-running is safe
             proc = self.run_script("install-codex.sh")
@@ -89,44 +82,30 @@ class InstallScripts(unittest.TestCase):
         for name in SKILLS:
             self.assertTrue((self.skills_dir() / name / "SKILL.md").is_file(), name)
         self.assertFalse((self.codex_home / "hooks.json").exists())
-        profile = (self.codex_home / "game.config.toml").read_text()
-        self.assertIn('model = "gpt-6-astra"', profile)
-        self.assertEqual(sorted(p.name for p in (self.codex_home / "agents").iterdir()),
-                         ["game-critic.toml", "game-designer.toml", "my-role.toml"])
+        self.assertFalse((self.codex_home / "agents").exists())
         self.assertEqual(sorted(self.mcp()), ["motion-forge"])
         self.assertEqual(self.mcp()["motion-forge"]["args"], ["run", "--quiet", "--script", MOTION])
 
         proc = self.run_script("uninstall-codex.sh")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertEqual([p.name for p in self.skills_dir().iterdir()], ["someone-elses"])
-        self.assertFalse((self.codex_home / "game.config.toml").exists())
-        self.assertEqual([p.name for p in (self.codex_home / "agents").iterdir()], ["my-role.toml"])
         self.assertEqual(self.mcp(), {})
 
     def test_only_installs_the_listed_components(self):
-        proc = self.run_script("install-codex.sh", "--only", "profile")
+        proc = self.run_script("install-codex.sh", "--only", "mcp")
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertFalse(self.skills_dir().exists())
-        self.assertTrue((self.codex_home / "game.config.toml").is_file())
-        self.assertEqual(self.mcp(), {})
-        proc = self.run_script("install-codex.sh", "--only", "hooks")
-        self.assertNotEqual(proc.returncode, 0)
-        self.assertIn("unknown component: hooks", proc.stderr)
-        (self.codex_home / "game.config.toml").unlink()
+        self.assertIn("motion-forge", self.mcp())
+        for removed in ("hooks", "profile"):
+            proc = self.run_script("install-codex.sh", "--only", removed)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn(f"unknown component: {removed}", proc.stderr)
         proc = self.run_script("install-codex.sh", "--only=skills,mcp")
         self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertTrue((self.skills_dir() / "game-feel").is_symlink())
-        self.assertIn("motion-forge", self.mcp())
-        self.assertFalse((self.codex_home / "game.config.toml").exists())
-        proc = self.run_script("install-codex-skills.sh", "game-art")
-        self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertIn("exists", proc.stdout)
-
-    def test_dry_runs_write_nothing(self):
-        proc = self.run_script("install-codex-profile.sh", "--dry-run", "--model", "gpt-6-luna")
-        self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertIn('model = "gpt-6-luna"', proc.stdout)
-        self.assertFalse(self.codex_home.exists())
+        self.assertEqual(sorted(p.name for p in self.skills_dir().iterdir()), SKILLS)
+        proc = self.run_script("install-codex-skills.sh", "no-such-skill")
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("no such skill", proc.stderr)
 
     def test_bad_options(self):
         for args in (["--bogus"], ["--only", "skills,nope"], ["--only"], ["--only", ","]):
@@ -135,28 +114,20 @@ class InstallScripts(unittest.TestCase):
             self.assertIn("error:", proc.stderr)
         proc = self.run_script("install-codex-mcp.sh", "--bogus")
         self.assertEqual(proc.returncode, 1)
-        proc = self.run_script("install-codex-profile.sh", "--model", "gpt-unknown")
-        self.assertEqual(proc.returncode, 1)
-        self.assertIn("not in this Codex's model list", proc.stderr)
         self.assertFalse(self.codex_home.exists())
         proc = self.run_script("install-codex.sh", "--help")
         self.assertEqual(proc.returncode, 0)
         self.assertIn("--only", proc.stdout)
 
     def test_a_failed_step_does_not_stop_the_others(self):
-        foreign = self.skills_dir() / "game-feel"
-        foreign.mkdir(parents=True)  # not ours: the skills step reports it and fails
-        my_profile = self.codex_home / "game.config.toml"
-        my_profile.parent.mkdir()
-        my_profile.write_text('model = "mine"\n')  # not ours either: the profile step refuses it
+        blocker = self.skills_dir()
+        blocker.parent.mkdir(parents=True)
+        blocker.write_text("not a folder\n")  # the skills step can't create its folder and fails
         proc = self.run_script("install-codex.sh")
         self.assertEqual(proc.returncode, 1)
-        self.assertIn("not from this repo", proc.stderr)
-        self.assertIn("was not installed by this script", proc.stderr)
-        self.assertEqual(my_profile.read_text(), 'model = "mine"\n')
-        self.assertFalse((self.codex_home / "agents").exists())  # the profile step changes nothing on refusal
-        self.assertIn("motion-forge", self.mcp())
-        self.assertTrue(foreign.is_dir() and not foreign.is_symlink())
+        self.assertIn("finished with errors", proc.stderr)
+        self.assertIn("motion-forge", self.mcp())  # the mcp step still ran
+        self.assertEqual(blocker.read_text(), "not a folder\n")
 
     def test_mcp_name_taken_by_another_server(self):
         self.codex_home.mkdir()

@@ -693,7 +693,7 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("new", help="scaffold a skill from the template")
     p.add_argument("name")
     p.add_argument("-c", "--category", required=True,
-                   help="folder under skills/ (for example game-dev); a new name creates the category")
+                   help="folder under skills/ (for example web-dev); a new name creates the category")
     p.add_argument("-p", "--platform", choices=list(PLATFORMS), help="create a skill for this platform only")
     p.set_defaults(func=cmd_new)
 

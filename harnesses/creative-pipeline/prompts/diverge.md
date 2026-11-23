@@ -12,7 +12,7 @@ Read the project files that matter (the tools list them) before you answer. Then
 
 For each one:
 
-- `name`: the working title a player or user would repeat.
+- `name`: the working title a user would repeat.
 - `hook`: the one thing someone would describe to a friend, with a number or a concrete detail.
 - `first_minute`: what the person sees and does in the first 60 seconds, as actions.
 - `why_not_generic`: the obvious version of this brief, and how this direction avoids it.

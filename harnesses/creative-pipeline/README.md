@@ -48,7 +48,7 @@ The last command runs every step from a replay file instead of models. The demo 
 ### Lean context (`context.py`)
 
 - **Two-tier skills.** The index tier is each skill's name and the leading clause of its description, about 22 tokens per skill. The execution tier is a skill's full `SKILL.md` body plus a few taste anchors, and it loads only for the skills that match the brief (`max_skills` per step). Matching is deterministic keyword scoring: name words count 3, "Use when" words 2, other description words 1.
-- **Taste anchors.** A skill can name an anchors file with `metadata.anchors` (default `references/examples.md`). Each `## ` section is one generic-vs-specific pair. `game-concept`, `game-prototype`, and `game-feel` have them.
+- **Taste anchors.** A skill can name an anchors file with `metadata.anchors` (default `references/examples.md`). Each `## ` section is one generic-vs-specific pair.
 - **Budgets.** Each step in `steps.json` has a token budget. The persona and brief are mandatory; lessons, skills, and anchors are added by priority while they fit. A step whose mandatory part doesn't fit stops the run.
 - **Tool filtering.** An API step sends only the tool schemas it declares (`tools`). A Claude Code step gets only its declared built-in tools (`--tools`), and only its declared MCP servers (`--strict-mcp-config`). An empty `mcp` loads none, which also drops the schemas of every MCP server you have configured.
 - **Telemetry.** `dry-run` and every run report each step's prompt tokens, tool-schema tokens, and savings against a baseline that loads every skill, anchor, persona, and tool schema at once. These counts are estimates at about 4 characters per token. `--exact` asks Gemini's `countTokens` endpoint for the real count. The CLIs add their own system prompts, which the harness can't see, so `run` also reports the usage each CLI returns.
@@ -66,7 +66,7 @@ A rule that trips in 2 or more runs becomes a lesson, and `onPrePrompt` adds it 
 
 ### Anti-slop gate (`gate.py`, `rules/slop.json`)
 
-- **Rules:** regexes for stock vocabulary (delve, tapestry, testament, crucial, landscape, and similar), sycophantic openers, "not just X, it's Y" templates, placeholder names and copy (Acme, Lorem ipsum, "My Game" titles), stub code (TODO, "implement me"), and the stock purple-blue gradient in CSS or Tailwind classes.
+- **Rules:** regexes for stock vocabulary (delve, tapestry, testament, crucial, landscape, and similar), sycophantic openers, "not just X, it's Y" templates, placeholder names and copy (Acme, Lorem ipsum, "My Website" titles), stub code (TODO, "implement me"), and the stock purple-blue gradient in CSS or Tailwind classes.
 - **Scopes:** each rule applies to prose, visible markup text, CSS, or code strings and comments. A brief can switch a rule off with `unless_brief`, so asking for a purple gradient allows one.
 - **Cadence:** flags paragraphs of 6 or more sentences with nearly equal lengths, and runs of 5 sentences within 2 words of each other. Em-dash density is only a warning.
 - **Retry:** on failure, the step gets `{"passed": false, "violations": [{rule, file, line, match, hint}]}` back through `prompts/revise.md`. CLI steps resume the same session (`claude --resume`, `codex exec resume`), and the API step continues its conversation. Retries stop at `max_retries` (3). A draft that never passes hands its remaining violations to the audit step as its must-fix list.

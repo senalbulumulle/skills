@@ -7,6 +7,5 @@
 - Docs: https://developers.openai.com/codex/skills
 - MCP servers: see `mcp/` (for example `mcp/web-dev/motion-forge/README.md` for Codex setup).
 - Hooks: `hooks/discover.py` lists the hook events and outputs the installed Codex binary supports.
-- Profile and roles: `profile/` has the `codex -p game` profile and the game-designer and game-critic agent roles.
 - Models: `models/` compares the models in Codex's catalog (Sol, Astra, Luna, Terra) without printing their instructions.
 - Install everything: `scripts/codex/install-codex.sh` (`--help` lists the options).

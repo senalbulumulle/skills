@@ -2,7 +2,7 @@
 # Install this repo's skills for Codex, globally: symlinks in ~/.agents/skills/.
 #
 #   scripts/codex/install-codex-skills.sh                 every skill
-#   scripts/codex/install-codex-skills.sh game-feel ...   only the named skills
+#   scripts/codex/install-codex-skills.sh NAME ...        only the named skills
 #
 # Skills with a Codex variant (agents/openai.yaml) are built into dist/codex/ first.
 # Every skill is validated before anything is linked. Re-run after pulling to pick up new skills.

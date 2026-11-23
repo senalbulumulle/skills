@@ -4,10 +4,10 @@
     {
       "tool_calls": [{"name": "list_files", "args": {}}, {"name": "read_file", "args": {"path": "../../../../../../etc/hostname"}},
                      {"name": "search_text", "args": {"pattern": "x"}}],
-      "text": "{\"directions\": [{\"name\": \"Tidelock\", \"hook\": \"Let's delve into a crucial harbor puzzle about tides and gates.\", \"first_minute\": \"You open the first gate and the water rises 1 meter.\", \"why_not_generic\": \"It is not just a puzzle game, it's a journey.\"}, {\"name\": \"Moth Post\", \"hook\": \"Deliver letters by moth; each moth flies toward the brightest window.\", \"first_minute\": \"You light one lamp and watch the moth change course.\", \"why_not_generic\": \"The obvious version is a maze; here you steer with light, never directly.\"}]}"
+      "text": "{\"directions\": [{\"name\": \"Tidelock Ferries\", \"hook\": \"Let's delve into a crucial harbor website about tides and boats.\", \"first_minute\": \"You open the page and see the next departure.\", \"why_not_generic\": \"It is not just a timetable, it's a journey.\"}, {\"name\": \"Harbor Board\", \"hook\": \"The whole page is a flip-style departure board that updates as the tide rises.\", \"first_minute\": \"You watch the 09:40 sailing flip to 10:05 as the tide gauge climbs.\", \"why_not_generic\": \"The obvious version is a table of times; here the board shows why times move.\"}]}"
     },
     {
-      "text": "{\"directions\": [{\"name\": \"Tidelock\", \"hook\": \"The harbor floods 1 meter every 20 seconds, and each lock gate you shut redirects the water.\", \"first_minute\": \"You shut gate A, the east quay floods, and the ferry floats free of the mud.\", \"why_not_generic\": \"The obvious version is a pipe-rotation puzzle; here the water keeps moving while you think.\"}, {\"name\": \"Moth Post\", \"hook\": \"Deliver letters by moth; each moth flies toward the brightest window within 6 tiles.\", \"first_minute\": \"You light one lamp on Rook Street and watch the moth bank toward it.\", \"why_not_generic\": \"The obvious version is a maze; here you steer with light and never touch the moth.\"}, {\"name\": \"Cinder & Sons\", \"hook\": \"Run a chimney-sweep crew where soot on the roofs is the map of who burned what overnight.\", \"first_minute\": \"You read three soot patterns and send the youngest sweep down the hottest flue.\", \"why_not_generic\": \"The obvious version is a cleaning sim; here the soot is the story and the clue.\"}]}"
+      "text": "{\"directions\": [{\"name\": \"Tidelock Ferries\", \"hook\": \"A tide clock at the top of the page shows the water level and the next sailing it allows, updated every 10 minutes.\", \"first_minute\": \"You see the 10:05 sailing, read that high water moved it from 09:40, and tap Book a seat.\", \"why_not_generic\": \"The obvious version is a static timetable; here the tide explains every time on the page.\"}, {\"name\": \"Harbor Board\", \"hook\": \"The whole page is a flip-style departure board that updates as the tide rises.\", \"first_minute\": \"You watch the 09:40 sailing flip to 10:05 as the tide gauge climbs.\", \"why_not_generic\": \"The obvious version is a table of times; here the board shows why times move.\"}, {\"name\": \"Ferry Log\", \"hook\": \"Each departure has a one-line note from the skipper, such as fog on the east quay or seals at the breakwater.\", \"first_minute\": \"You read three skipper notes and pick the calm 14:20 crossing.\", \"why_not_generic\": \"The obvious version is a brochure; here the people running the boat speak on the page.\"}]}"
     }
   ],
   "draft": [
@@ -18,15 +18,15 @@
         {"tool_name": "Bash", "tool_input": {"command": "rm -rf ."}}
       ],
       "files": {
-        "index.html": "<!doctype html>\n<html><head><title>My Game</title>\n<style>body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }</style></head>\n<body><h1>Acme Corp presents</h1><p>Lorem ipsum dolor sit amet.</p>\n<script>\n// TODO: add the tide\nconst speed = 5;\n</script></body></html>\n",
-        "PIPELINE.md": "Picked Tidelock.\n\nOpen index.html in a browser.\n"
+        "index.html": "<!doctype html>\n<html><head><title>My Website</title>\n<style>body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }</style></head>\n<body><h1>Acme Corp presents</h1><p>Lorem ipsum dolor sit amet.</p>\n<script>\n// TODO: add the timetable\nconst sailings = [];\n</script></body></html>\n",
+        "PIPELINE.md": "Picked Tidelock Ferries.\n\nOpen index.html in a browser.\n"
       },
-      "text": "Great question! I built a seamless harbor experience."
+      "text": "Great question! I built a seamless ferry experience."
     },
     {
       "files": {
-        "index.html": "<!doctype html>\n<html><head><title>Tidelock</title>\n<style>body { background: #2b3a42; color: #e8f1ee; } .buoy { color: #ff7a1a; }</style></head>\n<body><h1>Tidelock</h1><p>The harbor floods at dawn. Get the ferry out.</p>\n<canvas id=\"harbor\" width=\"640\" height=\"360\"></canvas>\n<script>\nconst CONFIG = { tide: { riseMeters: 1, everySeconds: 20 }, ferry: { maxSpeed: 220 } };\n</script></body></html>\n",
-        "PIPELINE.md": "Picked Tidelock: the rising water gives every puzzle a clock, which the other two directions lack.\n\nOpen index.html in a browser. Least sure about: whether 20 seconds per meter is too fast for the first harbor.\n"
+        "index.html": "<!doctype html>\n<html><head><title>Tidelock Ferries</title>\n<style>body { background: #2b3a42; color: #e8f1ee; } .book { background: #ff7a1a; }</style></head>\n<body><h1>Tidelock Ferries</h1><p>The harbor floods at dawn. Book before the tide turns.</p>\n<button class=\"book\">Book a seat</button>\n<script>\nconst CONFIG = { tide: { checkEveryMinutes: 10 }, sailings: [\"10:05\", \"14:20\", \"18:45\"] };\n</script></body></html>\n",
+        "PIPELINE.md": "Picked Tidelock Ferries: the tide clock explains every time on the page, which the other two directions only hint at.\n\nOpen index.html in a browser. Least sure about: whether a 10-minute tide update is too slow on a spring-tide morning.\n"
       },
       "text": "Rewrote the title, copy, and palette; removed the stub comment."
     }
@@ -34,9 +34,9 @@
   "audit": [
     {
       "files": {
-        "index.html": "<!doctype html>\n<html><head><title>Tidelock</title>\n<style>body { background: #2b3a42; color: #e8f1ee; } .buoy { color: #ff7a1a; }</style></head>\n<body><h1>Tidelock</h1><p>The harbor floods at dawn. Get the ferry out.</p>\n<p id=\"tide\">Tide: 0 m</p>\n<canvas id=\"harbor\" width=\"640\" height=\"360\"></canvas>\n<script>\nconst CONFIG = { tide: { riseMeters: 1, everySeconds: 20 }, ferry: { maxSpeed: 220 } };\n</script></body></html>\n"
+        "index.html": "<!doctype html>\n<html><head><title>Tidelock Ferries</title>\n<style>body { background: #2b3a42; color: #e8f1ee; } .book { background: #ff7a1a; }</style></head>\n<body><h1>Tidelock Ferries</h1><p>The harbor floods at dawn. Book before the tide turns.</p>\n<p id=\"next\">Next sailing: 10:05</p>\n<button class=\"book\">Book a seat</button>\n<script>\nconst CONFIG = { tide: { checkEveryMinutes: 10 }, sailings: [\"10:05\", \"14:20\", \"18:45\"] };\n</script></body></html>\n"
       },
-      "text": "{\"summary\": \"The page loads with the right title and palette. The tide level was invisible, so I added a readout.\", \"findings\": [{\"severity\": \"confusing\", \"problem\": \"Nothing on screen showed the tide level\", \"where\": \"index.html body\", \"fixed\": true}]}"
+      "text": "{\"summary\": \"The page loads with the right title and palette. Nothing showed the next sailing, so I added it above the booking button.\", \"findings\": [{\"severity\": \"confusing\", \"problem\": \"The next sailing time was not on the page\", \"where\": \"index.html body\", \"fixed\": true}]}"
     }
   ]
 }

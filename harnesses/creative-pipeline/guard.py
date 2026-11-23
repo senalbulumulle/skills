@@ -44,7 +44,7 @@ DESTRUCTIVE = [
     (r"^(?:npm|pnpm|yarn) publish\b|^cargo publish\b|^twine upload\b|^gem push\b|^docker push\b",
      "publishes a package"),
     (r"^gh (?:pr|release|repo|issue) (?:create|delete|merge|edit)\b|^gh api\b", "changes GitHub"),
-    (r"^(?:butler push|steamcmd\b.*\+run_app_build|xcrun altool|altool)\b", "uploads a build to a store"),
+    (r"^(?:xcrun altool|altool)\b", "uploads a build to the App Store"),
 ]
 PIPE_TO_SHELL = re.compile(r"\b(?:curl|wget)\b[^|]*\|\s*(?:sudo\s+)?(?:ba|z|da)?sh\b")
 
