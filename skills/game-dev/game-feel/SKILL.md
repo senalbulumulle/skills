@@ -1,6 +1,8 @@
 ---
 name: game-feel
 description: Add game feel (juice) to a working game, starting with responsive controls, then hit stop, screen shake, easing, squash and stretch, particles, flashes, and feedback for every player action, with an accessibility toggle. Use when a game feels flat, floaty, stiff, unresponsive, or boring, or when asked to polish, juice up, add impact, or make a game feel good.
+metadata:
+  anchors: "references/examples.md"
 ---
 
 # Game Feel

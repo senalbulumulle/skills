@@ -1,6 +1,8 @@
 ---
 name: game-prototype
 description: Build a playable game prototype fast from a concept or design brief, core loop first, then win, lose, restart, and difficulty. Defaults to a single-file HTML5 canvas game with no build step, and adapts to Godot, Unity, Phaser, or an engine already in the repo. Use when asked to make, build, code, or prototype a game, a game jam entry, a playable demo, or a mechanic test.
+metadata:
+  anchors: "references/examples.md"
 ---
 
 # Game Prototype

@@ -1,0 +1,90 @@
+{
+  "about": "The pipeline, in order. provider: gemini (API), claude (Claude Code, headless), or codex (Codex CLI). budget: the most tokens the harness-built prompt may use. skills: none, index (names and triggers only), or match (full instructions for the best matches). tools: harness-run tool schemas sent to an API step (see tools.json). cli_tools: built-in tools a Claude Code step may use (--tools). mcp: MCP servers a Claude Code step gets ({} means none). gate: run the anti-slop gate and retry on failure. schema: the structure the step's final answer must have.",
+  "max_retries": 3,
+  "steps": [
+    {
+      "id": "diverge",
+      "provider": "gemini",
+      "role": "high-context divergent brainstorming",
+      "persona": "diverge.md",
+      "temperature": 1.0,
+      "tools": ["list_files", "read_file", "read_skill_reference"],
+      "max_tool_rounds": 4,
+      "budget": 2500,
+      "skills": "index",
+      "gate": true,
+      "schema": "directions"
+    },
+    {
+      "id": "draft",
+      "provider": "claude",
+      "role": "opinionated drafting and synthesis",
+      "persona": "draft.md",
+      "cli_tools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash"],
+      "mcp": {},
+      "budget": 9000,
+      "skills": "match",
+      "max_skills": 2,
+      "anchors": 3,
+      "gate": true
+    },
+    {
+      "id": "audit",
+      "provider": "codex",
+      "role": "literal verification and hostile editing",
+      "persona": "audit.md",
+      "effort": "high",
+      "budget": 7000,
+      "skills": "match",
+      "max_skills": 1,
+      "anchors": 2,
+      "gate": true,
+      "schema": "audit"
+    }
+  ],
+  "schemas": {
+    "directions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["directions"],
+      "properties": {
+        "directions": {
+          "type": "array", "minItems": 3, "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "hook", "first_minute", "why_not_generic"],
+            "properties": {
+              "name": {"type": "string", "minLength": 3},
+              "hook": {"type": "string", "minLength": 20},
+              "first_minute": {"type": "string", "minLength": 20},
+              "why_not_generic": {"type": "string", "minLength": 20}
+            }
+          }
+        }
+      }
+    },
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "findings"],
+      "properties": {
+        "summary": {"type": "string", "minLength": 10},
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["severity", "problem", "where", "fixed"],
+            "properties": {
+              "severity": {"type": "string", "enum": ["broken", "confusing", "dull", "generic"]},
+              "problem": {"type": "string", "minLength": 5},
+              "where": {"type": "string"},
+              "fixed": {"type": "boolean"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

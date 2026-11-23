@@ -1,0 +1,36 @@
+{
+  "about": "Tools the harness runs itself for API steps (Gemini). Each step in steps.json names the ones it may use, and only those schemas are sent. Every call goes through guard.py first, with the step's read roots.",
+  "tools": [
+    {
+      "name": "list_files",
+      "description": "List files under a folder of the project, one relative path per line.",
+      "parameters": {"type": "object", "properties": {
+        "path": {"type": "string", "description": "Folder relative to the project root. Default: the root."},
+        "limit": {"type": "integer", "description": "Most paths to return. Default 200."}}}
+    },
+    {
+      "name": "read_file",
+      "description": "Read a text file from the project.",
+      "parameters": {"type": "object", "properties": {
+        "path": {"type": "string", "description": "File relative to the project root."},
+        "max_bytes": {"type": "integer", "description": "Most bytes to return. Default 20000."}},
+        "required": ["path"]}
+    },
+    {
+      "name": "search_text",
+      "description": "Find lines matching a regular expression in the project's text files.",
+      "parameters": {"type": "object", "properties": {
+        "pattern": {"type": "string", "description": "Python regular expression."},
+        "path": {"type": "string", "description": "Folder to search, relative to the project root. Default: the root."}},
+        "required": ["pattern"]}
+    },
+    {
+      "name": "read_skill_reference",
+      "description": "Read a reference file from one of this repo's skills, such as tuning numbers or examples.",
+      "parameters": {"type": "object", "properties": {
+        "skill": {"type": "string", "description": "Skill name, for example game-feel."},
+        "file": {"type": "string", "description": "Path inside the skill folder, for example references/tuning.md."}},
+        "required": ["skill", "file"]}
+    }
+  ]
+}

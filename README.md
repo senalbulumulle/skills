@@ -18,6 +18,8 @@ MCP servers are grouped the same way under `mcp/<category>/<name>/` (see [`mcp/R
 | --- | --- | --- |
 | `web-dev` | `motion-forge` | Motion-rich Web Components, showcase builder, motion audit |
 
+Harnesses in [`harnesses/`](harnesses/README.md) run several model sessions as one workflow. [`creative-pipeline`](harnesses/creative-pipeline/README.md) has Gemini brainstorm, Claude Code build, a deterministic anti-slop gate reject stock output, and Codex audit the result.
+
 ## Installation
 
 ### Dependencies

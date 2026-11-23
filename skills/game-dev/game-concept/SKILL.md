@@ -1,6 +1,8 @@
 ---
 name: game-concept
 description: Generate original game concepts, score them, and turn the best one into a one-page design brief ready to build. Use when the user wants game ideas, a game jam concept, a core mechanic, a pitch, or says "help me design a game", or gives a theme, constraint, or genre to build a game around.
+metadata:
+  anchors: "references/examples.md"
 ---
 
 # Game Concept

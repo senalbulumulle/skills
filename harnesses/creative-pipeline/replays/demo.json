@@ -1,0 +1,42 @@
+{
+  "about": "A replay for --mock: every step's first attempt has the kinds of problems the gate and guard exist to catch, and the retry fixes them. Run: pipeline.py run replays/demo-brief.md --mock replays/demo.json",
+  "diverge": [
+    {
+      "tool_calls": [{"name": "list_files", "args": {}}, {"name": "read_file", "args": {"path": "../../../../../../etc/hostname"}},
+                     {"name": "search_text", "args": {"pattern": "x"}}],
+      "text": "{\"directions\": [{\"name\": \"Tidelock\", \"hook\": \"Let's delve into a crucial harbor puzzle about tides and gates.\", \"first_minute\": \"You open the first gate and the water rises 1 meter.\", \"why_not_generic\": \"It is not just a puzzle game, it's a journey.\"}, {\"name\": \"Moth Post\", \"hook\": \"Deliver letters by moth; each moth flies toward the brightest window.\", \"first_minute\": \"You light one lamp and watch the moth change course.\", \"why_not_generic\": \"The obvious version is a maze; here you steer with light, never directly.\"}]}"
+    },
+    {
+      "text": "{\"directions\": [{\"name\": \"Tidelock\", \"hook\": \"The harbor floods 1 meter every 20 seconds, and each lock gate you shut redirects the water.\", \"first_minute\": \"You shut gate A, the east quay floods, and the ferry floats free of the mud.\", \"why_not_generic\": \"The obvious version is a pipe-rotation puzzle; here the water keeps moving while you think.\"}, {\"name\": \"Moth Post\", \"hook\": \"Deliver letters by moth; each moth flies toward the brightest window within 6 tiles.\", \"first_minute\": \"You light one lamp on Rook Street and watch the moth bank toward it.\", \"why_not_generic\": \"The obvious version is a maze; here you steer with light and never touch the moth.\"}, {\"name\": \"Cinder & Sons\", \"hook\": \"Run a chimney-sweep crew where soot on the roofs is the map of who burned what overnight.\", \"first_minute\": \"You read three soot patterns and send the youngest sweep down the hottest flue.\", \"why_not_generic\": \"The obvious version is a cleaning sim; here the soot is the story and the clue.\"}]}"
+    }
+  ],
+  "draft": [
+    {
+      "tool_calls": [
+        {"tool_name": "Bash", "tool_input": {"command": "git push origin main"}},
+        {"tool_name": "Write", "tool_input": {"file_path": "/etc/creative-pipeline-test", "content": "x"}},
+        {"tool_name": "Bash", "tool_input": {"command": "rm -rf ."}}
+      ],
+      "files": {
+        "index.html": "<!doctype html>\n<html><head><title>My Game</title>\n<style>body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }</style></head>\n<body><h1>Acme Corp presents</h1><p>Lorem ipsum dolor sit amet.</p>\n<script>\n// TODO: add the tide\nconst speed = 5;\n</script></body></html>\n",
+        "PIPELINE.md": "Picked Tidelock.\n\nOpen index.html in a browser.\n"
+      },
+      "text": "Great question! I built a seamless harbor experience."
+    },
+    {
+      "files": {
+        "index.html": "<!doctype html>\n<html><head><title>Tidelock</title>\n<style>body { background: #2b3a42; color: #e8f1ee; } .buoy { color: #ff7a1a; }</style></head>\n<body><h1>Tidelock</h1><p>The harbor floods at dawn. Get the ferry out.</p>\n<canvas id=\"harbor\" width=\"640\" height=\"360\"></canvas>\n<script>\nconst CONFIG = { tide: { riseMeters: 1, everySeconds: 20 }, ferry: { maxSpeed: 220 } };\n</script></body></html>\n",
+        "PIPELINE.md": "Picked Tidelock: the rising water gives every puzzle a clock, which the other two directions lack.\n\nOpen index.html in a browser. Least sure about: whether 20 seconds per meter is too fast for the first harbor.\n"
+      },
+      "text": "Rewrote the title, copy, and palette; removed the stub comment."
+    }
+  ],
+  "audit": [
+    {
+      "files": {
+        "index.html": "<!doctype html>\n<html><head><title>Tidelock</title>\n<style>body { background: #2b3a42; color: #e8f1ee; } .buoy { color: #ff7a1a; }</style></head>\n<body><h1>Tidelock</h1><p>The harbor floods at dawn. Get the ferry out.</p>\n<p id=\"tide\">Tide: 0 m</p>\n<canvas id=\"harbor\" width=\"640\" height=\"360\"></canvas>\n<script>\nconst CONFIG = { tide: { riseMeters: 1, everySeconds: 20 }, ferry: { maxSpeed: 220 } };\n</script></body></html>\n"
+      },
+      "text": "{\"summary\": \"The page loads with the right title and palette. The tide level was invisible, so I added a readout.\", \"findings\": [{\"severity\": \"confusing\", \"problem\": \"Nothing on screen showed the tide level\", \"where\": \"index.html body\", \"fixed\": true}]}"
+    }
+  ]
+}

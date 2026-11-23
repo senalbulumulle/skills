@@ -39,6 +39,10 @@ A Codex hook may use only the outputs the installed Codex accepts: check with `p
 
 The Codex `game` profile and agent roles live in `platforms/codex/profile/`. After a Codex update, save a model snapshot with `platforms/codex/models/export_models.py --json`; it records structure only, never OpenAI's instruction text.
 
+## Harnesses
+
+Harnesses live in `harnesses/<name>/`; list each one in `harnesses/README.md`. Run Claude Code and Codex steps as headless CLI sessions so skills and MCP servers stay available; call a model API directly only for steps that need nothing but text. Each harness has standard-library Python 3.9+ scripts, its prompts as Markdown files in `prompts/`, and a README. Tests go in `tools/test_<name>.py` and use mocks or fake CLIs so they run without a model. Never let a harness merge, push, or publish: it leaves branches for the user.
+
 ## MCP servers
 
 MCP servers live in `mcp/<category>/<name>/`, using the skill category names (plus categories such as `web-dev` that have no skills yet); list each one in `mcp/README.md`. Each has tool logic in a standard-library module with unit tests, a thin `server.py` that registers tools, and a README with setup for Claude Code and Codex. One server serves every platform; only registration differs.
