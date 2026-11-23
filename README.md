@@ -18,8 +18,6 @@ MCP servers are grouped the same way under `mcp/<category>/<name>/` (see [`mcp/R
 | --- | --- | --- |
 | `web-dev` | `motion-forge` | Motion-rich Web Components, showcase builder, motion audit |
 
-Harnesses in [`harnesses/`](harnesses/README.md) run several Claude Code or Codex sessions as one workflow. [`rival-studios`](harnesses/rival-studios/README.md) has rival studios build the same brief, a blind judge pick the best build, and the winner take the others' best ideas.
-
 ## Installation
 
 ### Dependencies
