@@ -23,4 +23,4 @@ The installer writes and removes only files that start with its marker line, so 
 
 - `codex -p NAME` layers `$CODEX_HOME/NAME.config.toml` on top of `config.toml`, and its `developer_instructions` becomes the first developer message.
 - Role files in `$CODEX_HOME/agents/` are loaded automatically. Each needs `name` and `developer_instructions`, and its `description` is what the spawn tool lists.
-- A captured request with the profile showed model `gpt-6-astra`, effort `high`, the profile instructions, every role, and the game hooks' creative brief.
+- A captured request with the profile showed model `gpt-6-astra`, effort `high`, the profile instructions, and every role.

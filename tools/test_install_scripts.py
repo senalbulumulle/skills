@@ -25,9 +25,7 @@ FAKE_CODEX = textwrap.dedent(f"""\
     state = Path(os.environ["CODEX_HOME"]) / "fake-mcp.json"
     servers = json.loads(state.read_text()) if state.is_file() else {{}}
     args = sys.argv[1:]
-    if args[:2] == ["features", "list"]:
-        print("hooks                stable             " + os.environ.get("FAKE_HOOKS", "true"))
-    elif args[:2] == ["debug", "models"]:
+    if args[:2] == ["debug", "models"]:
         print(json.dumps({{"models": [
             {{"slug": "gpt-6-luna", "visibility": "list", "supported_reasoning_levels": [{{"effort": "high"}}]}},
             {{"slug": "gpt-6-astra", "visibility": "list", "supported_reasoning_levels": [{{"effort": "high"}}]}}]}}))
@@ -71,9 +69,6 @@ class InstallScripts(unittest.TestCase):
     def skills_dir(self) -> Path:
         return self.home / ".agents" / "skills"
 
-    def hooks(self) -> dict:
-        return json.loads((self.codex_home / "hooks.json").read_text())["hooks"]
-
     def mcp(self) -> dict:
         state = self.codex_home / "fake-mcp.json"
         return json.loads(state.read_text()) if state.is_file() else {}
@@ -81,11 +76,9 @@ class InstallScripts(unittest.TestCase):
     def test_install_everything_then_uninstall(self):
         other = self.skills_dir() / "someone-elses"
         other.mkdir(parents=True)
-        mine = {"type": "command", "command": "echo mine"}
         my_role = self.codex_home / "agents" / "my-role.toml"
         my_role.parent.mkdir(parents=True)
         my_role.write_text('name = "my-role"\n')
-        (self.codex_home / "hooks.json").write_text(json.dumps({"hooks": {"Stop": [{"hooks": [mine]}]}}))
 
         for _ in range(2):  # re-running is safe
             proc = self.run_script("install-codex.sh")
@@ -95,10 +88,7 @@ class InstallScripts(unittest.TestCase):
         self.assertEqual(installed, SKILLS)
         for name in SKILLS:
             self.assertTrue((self.skills_dir() / name / "SKILL.md").is_file(), name)
-        hooks = self.hooks()
-        self.assertEqual(sorted(hooks), ["PostToolUse", "PreToolUse", "SessionStart", "Stop", "UserPromptSubmit"])
-        self.assertIn(mine, [h for g in hooks["Stop"] for h in g["hooks"]])
-        self.assertEqual(sum("game_hooks.py" in h["command"] for g in hooks["Stop"] for h in g["hooks"]), 1)
+        self.assertFalse((self.codex_home / "hooks.json").exists())
         profile = (self.codex_home / "game.config.toml").read_text()
         self.assertIn('model = "gpt-6-astra"', profile)
         self.assertEqual(sorted(p.name for p in (self.codex_home / "agents").iterdir()),
@@ -109,17 +99,20 @@ class InstallScripts(unittest.TestCase):
         proc = self.run_script("uninstall-codex.sh")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertEqual([p.name for p in self.skills_dir().iterdir()], ["someone-elses"])
-        self.assertEqual(self.hooks(), {"Stop": [{"hooks": [mine]}]})
         self.assertFalse((self.codex_home / "game.config.toml").exists())
         self.assertEqual([p.name for p in (self.codex_home / "agents").iterdir()], ["my-role.toml"])
         self.assertEqual(self.mcp(), {})
 
     def test_only_installs_the_listed_components(self):
-        proc = self.run_script("install-codex.sh", "--only", "hooks")
+        proc = self.run_script("install-codex.sh", "--only", "profile")
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertFalse(self.skills_dir().exists())
-        self.assertFalse((self.codex_home / "game.config.toml").exists())
-        self.assertIn("PreToolUse", self.hooks())
+        self.assertTrue((self.codex_home / "game.config.toml").is_file())
+        self.assertEqual(self.mcp(), {})
+        proc = self.run_script("install-codex.sh", "--only", "hooks")
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("unknown component: hooks", proc.stderr)
+        (self.codex_home / "game.config.toml").unlink()
         proc = self.run_script("install-codex.sh", "--only=skills,mcp")
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertTrue((self.skills_dir() / "game-feel").is_symlink())
@@ -130,9 +123,6 @@ class InstallScripts(unittest.TestCase):
         self.assertIn("exists", proc.stdout)
 
     def test_dry_runs_write_nothing(self):
-        proc = self.run_script("install-codex-hooks.sh", "--dry-run")
-        self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertIn('"UserPromptSubmit"', proc.stdout)
         proc = self.run_script("install-codex-profile.sh", "--dry-run", "--model", "gpt-6-luna")
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn('model = "gpt-6-luna"', proc.stdout)
@@ -165,7 +155,6 @@ class InstallScripts(unittest.TestCase):
         self.assertIn("was not installed by this script", proc.stderr)
         self.assertEqual(my_profile.read_text(), 'model = "mine"\n')
         self.assertFalse((self.codex_home / "agents").exists())  # the profile step changes nothing on refusal
-        self.assertIn("PreToolUse", self.hooks())
         self.assertIn("motion-forge", self.mcp())
         self.assertTrue(foreign.is_dir() and not foreign.is_symlink())
 
@@ -198,13 +187,6 @@ class InstallScripts(unittest.TestCase):
         proc = self.run_script("install-codex-mcp.sh", "-c", "web-dev")
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertEqual(self.mcp()["motion-forge"]["args"], ["run", "--quiet", "--script", MOTION])
-
-    def test_warns_when_codex_hooks_are_off(self):
-        env = {**self.env, "FAKE_HOOKS": "false"}
-        proc = self.run_script("install-codex-hooks.sh", "--dry-run", env=env)
-        self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertIn("codex features enable hooks", proc.stderr)
-        self.assertNotIn("turned off", self.run_script("install-codex-hooks.sh", "--dry-run").stderr)
 
     def test_missing_tool_fails_before_changing_anything(self):
         bin_dir = self.home / "minimal-bin"

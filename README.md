@@ -29,7 +29,7 @@ Required:
 
 Optional, only for the features that use them:
 
-- [Python](https://www.python.org/) 3.9 or newer: the scripts in some skills, and the Codex hooks and profile installers.
+- [Python](https://www.python.org/) 3.9 or newer: the scripts in some skills, and the Codex profile installer.
 - [Node.js](https://nodejs.org/): the browser playtest (`game-playtest`) and the HTML script check (`game-prototype`).
 - [Codex CLI](https://developers.openai.com/codex/cli): `scripts/codex/install-codex.sh` registers the MCP servers with it.
 
@@ -86,7 +86,7 @@ Replace `/path/to/project` with your project folder:
 tools/skills.py install --project /path/to/project
 ```
 
-### Codex: skills, hooks, profile, and MCP servers
+### Codex: skills, profile, and MCP servers
 
 ```sh
 scripts/codex/install-codex.sh

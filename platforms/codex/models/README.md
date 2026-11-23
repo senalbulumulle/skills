@@ -20,7 +20,7 @@ A model's behavior in Codex comes from its weights plus that instruction set. Ne
 | --- | --- | --- |
 | `developer_instructions` (config or a `-p` profile file) | Adds a developer message before the conversation | yes: the `game` profile |
 | `[agents.<name>]`, or a role file in `$CODEX_HOME/agents/` | Adds a sub-agent role with its own instructions | yes: game-designer, game-critic |
-| hooks (`hooks.json`) | Add context or block actions at lifecycle events | yes: `platforms/codex/hooks/` |
+| hooks (`hooks.json`) | Add context or block actions at lifecycle events | no (`platforms/codex/hooks/discover.py` lists what Codex accepts) |
 | MCP servers | Add tools | yes: `mcp/web-dev/motion-forge/` |
 | `model_instructions_file` | Replaces the model's instruction set entirely | no: it would drop OpenAI's tuning for that model |
 | `model_catalog_json` | Replaces the whole catalog | no: the catalog would stop updating |

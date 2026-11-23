@@ -35,7 +35,7 @@ Every script or library added under a skill's `scripts/` or `assets/` needs test
 
 ## Hooks
 
-Codex hooks live in `platforms/codex/hooks/`: standard-library Python 3.9+ that fails open (an internal error exits 0 with no output), tested in `tools/test_codex_hooks.py`. Use only hook outputs that the installed Codex accepts: check with `platforms/codex/hooks/discover.py`, and save a new snapshot when Codex changes.
+A Codex hook may use only the outputs the installed Codex accepts: check with `platforms/codex/hooks/discover.py`, and save a new snapshot when Codex changes.
 
 The Codex `game` profile and agent roles live in `platforms/codex/profile/`. After a Codex update, save a model snapshot with `platforms/codex/models/export_models.py --json`; it records structure only, never OpenAI's instruction text.
 
