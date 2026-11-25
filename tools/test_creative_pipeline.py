@@ -91,6 +91,15 @@ class TempCase(unittest.TestCase):
             code = pipeline.main(list(argv))
         return code, out.getvalue(), err.getvalue()
 
+    def fake_bins(self):
+        bin_dir = self.tmp / "bin"
+        bin_dir.mkdir()
+        for name, body in (("claude", FAKE_CLAUDE), ("codex", FAKE_CODEX)):
+            (bin_dir / name).write_text(body)
+            (bin_dir / name).chmod(0o755)
+        log = self.tmp / "calls.jsonl"
+        return {"PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}", "FAKE_LOG": str(log)}, log
+
     def only_run(self, repo):
         return sorted((repo / ".creative-pipeline" / "runs").iterdir())[-1]
 
@@ -385,11 +394,11 @@ class Providers(TempCase):
              "usageMetadata": {"promptTokenCount": 100, "candidatesTokenCount": 5}},
             {"candidates": [{"content": {"role": "model", "parts": [{"text": '{"directions": []}'}]}}],
              "usageMetadata": {"promptTokenCount": 150, "candidatesTokenCount": 20}}]
-        g._post = lambda method, body: (sent.append(json.loads(json.dumps(body))), replies.pop(0))[1]
+        g._post = lambda method, body, model=None: (sent.append(json.loads(json.dumps(body))), replies.pop(0))[1]
         tools = context.select_tools(["read_file"], context.load_tools())
         res = g.generate("sys", "go", 1.0, tools, lambda n, a: {"result": f"{n}:{a['path']}"}, 4)
         self.assertEqual(res.text, '{"directions": []}')
-        self.assertEqual(res.usage, {"input_tokens": 250, "output_tokens": 25})
+        self.assertEqual(res.usage, {"fresh_input": 250, "cached_input": 0, "output": 25})
         self.assertEqual([d["name"] for d in sent[0]["tools"][0]["functionDeclarations"]], ["read_file"])
         second = sent[1]["contents"]
         self.assertEqual(second[1]["parts"][0]["thoughtSignature"], "sig")  # model turn sent back unchanged
@@ -397,6 +406,134 @@ class Providers(TempCase):
         body = g.body("s", [], 1.0, [], json_mode=True)
         self.assertEqual(body["generationConfig"]["responseMimeType"], "application/json")
         self.assertNotIn("tools", body)
+
+
+# ---------------------------------------------------------------- usage and cheap retries
+
+class Usage(unittest.TestCase):
+    def test_every_provider_maps_to_one_shape(self):
+        claude = providers.claude_usage({"usage": {"input_tokens": 10, "cache_creation_input_tokens": 5,
+                                                   "cache_read_input_tokens": 100, "output_tokens": 7},
+                                         "total_cost_usd": 0.5})
+        self.assertEqual(claude, {"fresh_input": 15, "cached_input": 100, "output": 7, "cost_usd": 0.5})
+        codex = providers.codex_usage({"input_tokens": 900, "cached_input_tokens": 400, "output_tokens": 100})
+        self.assertEqual(codex, {"fresh_input": 500, "cached_input": 400, "output": 100})
+        gemini = providers.gemini_usage({"promptTokenCount": 300, "cachedContentTokenCount": 100,
+                                         "candidatesTokenCount": 20, "thoughtsTokenCount": 30})
+        self.assertEqual(gemini, {"fresh_input": 200, "cached_input": 100, "output": 50})
+        self.assertEqual(providers.total_tokens(gemini), 350)
+        self.assertEqual(providers.claude_usage({}), {"fresh_input": 0, "cached_input": 0, "output": 0})
+        total = providers.add_usage(providers.usage(), claude)
+        providers.add_usage(total, codex)
+        self.assertEqual(total, {"fresh_input": 515, "cached_input": 500, "output": 107, "cost_usd": 0.5})
+
+
+class Retries(TempCase):
+    def setUp(self):
+        super().setUp()
+        self.work = self.tmp / "run" / "work"
+        self.work.mkdir(parents=True)
+        self.config = {"step": "draft", "write_roots": [str(self.work)], "read_roots": [str(self.work)],
+                       "approve": [], "log": str(self.tmp / "run" / "guard.log")}
+        (self.work / "a.md").write_text("".join(f"line {i}\n" for i in range(1, 31)))
+
+    def test_excerpts_number_and_merge_the_flagged_lines(self):
+        violations = [{"file": "a.md", "line": 10}, {"file": "a.md", "line": 12}, {"file": "a.md", "line": 25},
+                      {"file": "(final message)", "line": 1}, {"file": "$.directions", "line": 0},
+                      {"file": "missing.md", "line": 3}]
+        text = pipeline.excerpts(self.work, violations)
+        self.assertIn("### a.md", text)
+        self.assertIn("    6 | line 6", text)
+        self.assertIn("   16 | line 16", text)
+        self.assertNotIn("   17 | line 17", text)
+        self.assertEqual(text.count("..."), 1)  # 6-16 merged, 21-29 separate
+        self.assertIn("   29 | line 29", text)
+        self.assertNotIn("missing.md", text)
+        self.assertEqual(pipeline.excerpts(None, violations), "(no file lines were flagged)")
+        with unittest.mock.patch.object(pipeline, "MAX_EXCERPT_CHARS", 10):
+            self.assertIn("left out", pipeline.excerpts(self.work, violations))
+
+    def test_apply_edits_only_exact_single_matches_inside_the_worktree(self):
+        (self.work / "b.md").write_text("same\nsame\n")
+        edits = [{"file": "a.md", "old": "line 7\n", "new": "line seven\n"},
+                 {"file": "b.md", "old": "same", "new": "x"},
+                 {"file": "a.md", "old": "not there", "new": "x"},
+                 {"file": "../../outside.md", "old": "x", "new": "y"},
+                 {"file": "nope.md", "old": "x", "new": "y"},
+                 {"file": "a.md", "old": "", "new": "y"},
+                 "not an edit"]
+        applied, problems = pipeline.apply_edits(self.work, edits, self.config)
+        self.assertEqual(applied, 1)
+        self.assertIn("line seven\n", (self.work / "a.md").read_text())
+        self.assertEqual((self.work / "b.md").read_text(), "same\nsame\n")
+        joined = " ".join(problems)
+        for expected in ("appears 2 times", "appears 0 times", "outside the run's worktree", "does not exist",
+                         "needs non-empty file and old"):
+            self.assertIn(expected, joined)
+        self.assertEqual(len(problems), 6)
+
+    def fix_env(self, step, answer):
+        class FakeFix:
+            def fix(self_, step, prompt, system, cwd, run_dir, attempt, model):
+                self_.prompt, self_.model = prompt, model
+                return providers.Result(json.dumps(answer), usage=providers.usage(10, 0, 5))
+        (self.tmp / "run" / "logs").mkdir(parents=True, exist_ok=True)
+        env = {"work": self.work, "run_dir": self.tmp / "run"}
+        return FakeFix(), env
+
+    def test_fix_round_for_an_api_step_uses_only_the_message(self):
+        steps = pipeline.load_steps()
+        step = {**next(s for s in steps["steps"] if s["id"] == "diverge"), "fix_model": "small-model"}
+        fixed = json.dumps({"directions": []})
+        provider, env = self.fix_env(step, {"edits": [{"file": "a.md", "old": "line 1", "new": "x"}], "message": fixed})
+        report = gate.check({}, "We delve.", "")
+        res, message, applied, problems = pipeline.fix_round(step, provider, {"brief": "b"}, env, self.config,
+                                                             report, "We delve.", 2, 4)
+        self.assertEqual((message, applied), (fixed, 1))
+        self.assertEqual(problems, ["this step has no files, so its edits were ignored"])
+        self.assertEqual((self.work / "a.md").read_text().splitlines()[0], "line 1")
+        self.assertEqual(provider.model, "small-model")
+        self.assertIn('"directions"', provider.prompt)  # the answer's schema is in the prompt
+        self.assertIn("vocab-delve", provider.prompt)
+
+    def test_fix_round_reports_a_non_json_answer(self):
+        step = next(s for s in pipeline.load_steps()["steps"] if s["id"] == "draft")
+        provider, env = self.fix_env(step, "not an object")
+        res, message, applied, problems = pipeline.fix_round(step, provider, {"brief": "b"}, env, self.config,
+                                                             gate.check({"a.md": "We delve."}), "m", 2, 4)
+        self.assertEqual((message, applied), ("m", 0))
+        self.assertEqual(problems, ["the fix call did not answer with a JSON object"])
+
+    def test_fix_call_argv(self):
+        claude = providers.ClaudeCLI().argv("fixer", [], Path("/r/fix.mcp.json"), "sid", False, [], "small")
+        self.assertEqual(claude[-2:], ["--tools", ""])
+        self.assertEqual(claude[claude.index("--model") + 1], "small")
+        self.assertNotIn("--resume", claude)
+        codex = providers.CodexCLI(model="big").argv({"id": "audit", "effort": "high"}, Path("/w"), Path("/l"),
+                                                     Path("/fix.json"), None, sandbox="read-only", effort="low",
+                                                     model="small", ephemeral=True)
+        for expected in ('sandbox_mode="read-only"', 'model_reasoning_effort="low"', "--ephemeral", "/fix.json"):
+            self.assertIn(expected, codex)
+        self.assertEqual(codex[codex.index("-m") + 1], "small")
+        plain = providers.ClaudeCLI(model="opus").plain_argv()
+        self.assertNotIn("--strict-mcp-config", plain)
+        self.assertNotIn("--tools", plain)
+        self.assertEqual(plain[-len(providers.PLAIN_TOOLS) - 1:], ["--allowedTools", *providers.PLAIN_TOOLS])
+        self.assertIn("guard.py", plain[plain.index("--settings") + 1])
+
+    def test_gemini_fix_is_a_fresh_tool_less_json_call(self):
+        g = providers.Gemini("gemini-test", "k")
+        sent = []
+        g._post = lambda method, body, model=None: (sent.append((json.loads(json.dumps(body)), model)), {
+            "candidates": [{"content": {"role": "model", "parts": [{"text": "{}"}]}}],
+            "usageMetadata": {"promptTokenCount": 40, "candidatesTokenCount": 2}})[1]
+        res = g.fix({"temperature": 1.0}, "fix this", "sys", Path("."), Path("."), 2, "gemini-small")
+        body, model = sent[0]
+        self.assertEqual(model, "gemini-small")
+        self.assertNotIn("tools", body)
+        self.assertEqual(len(body["contents"]), 1)
+        self.assertEqual(body["generationConfig"]["responseMimeType"], "application/json")
+        self.assertEqual(res.usage, {"fresh_input": 40, "cached_input": 0, "output": 2})
 
 
 # ---------------------------------------------------------------- end to end
@@ -408,20 +545,33 @@ FAKE_CLAUDE = textwrap.dedent(f"""\
     prompt = sys.stdin.read()
     with open(os.environ["FAKE_LOG"], "a") as f:
         f.write(json.dumps({{"bin": "claude", "args": args, "prompt": prompt}}) + "\\n")
-    settings = json.loads(args[args.index("--settings") + 1])
-    hook = settings["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
-    event = {{"hook_event_name": "PreToolUse", "cwd": os.getcwd(), "tool_name": "Bash",
-              "tool_input": {{"command": "git push origin main"}}}}
-    denied = subprocess.run(hook, shell=True, input=json.dumps(event), capture_output=True, text=True).stdout
-    first = "--session-id" in args
-    session = args[args.index("--session-id" if first else "--resume") + 1]
-    with open("index.html", "w") as f:
-        f.write("<title>My Website</title><p>Acme Corp</p>" if first else "<title>Tidelock Ferries</title><p>Book before the tide turns.</p>")
-    with open("PIPELINE.md", "w") as f:
-        f.write("Picked Tidelock: the tide is a clock.\\n")
-    print(json.dumps({{"type": "result", "result": "built it" + (" (push denied)" if "deny" in denied else ""),
-                      "session_id": session, "is_error": False, "num_turns": 3, "total_cost_usd": 0.02,
-                      "usage": {{"input_tokens": 1200, "output_tokens": 300}}}}))
+    SLOP = "<title>My Website</title><p>Acme Corp</p>"
+    CLEAN = "<title>Tidelock Ferries</title><p>Book before the tide turns.</p>"
+    if "--tools" in args and args[args.index("--tools") + 1] == "":  # a fix call: no tools, answer with edits
+        result = json.dumps({{"edits": [{{"file": "index.html", "old": SLOP, "new": CLEAN}}], "message": ""}})
+        usage, cost = {{"input_tokens": 200, "cache_creation_input_tokens": 50, "output_tokens": 40}}, 0.001
+    else:
+        settings = json.loads(args[args.index("--settings") + 1])
+        hook = settings["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+        event = {{"hook_event_name": "PreToolUse", "cwd": os.getcwd(), "tool_name": "Bash",
+                  "tool_input": {{"command": "git push origin main"}}}}
+        denied = subprocess.run(hook, shell=True, input=json.dumps(event), capture_output=True, text=True).stdout
+        if "--strict-mcp-config" not in args:  # the benchmark's plain session
+            page, usage, cost = SLOP, {{"input_tokens": 3000, "cache_read_input_tokens": 20000, "output_tokens": 900}}, 0.05
+        else:
+            page = SLOP if "--session-id" in args else CLEAN
+            usage = {{"input_tokens": 1200, "cache_creation_input_tokens": 800, "cache_read_input_tokens": 5000,
+                      "output_tokens": 300}}
+            cost = 0.02
+        with open("index.html", "w") as f:
+            f.write(page)
+        with open("PIPELINE.md", "w") as f:
+            f.write("Picked Tidelock: the tide is a clock.\\n")
+        result = "built it" + (" (push denied)" if "deny" in denied else "")
+    session = args[args.index("--session-id") + 1] if "--session-id" in args else (
+        args[args.index("--resume") + 1] if "--resume" in args else "plain-session")
+    print(json.dumps({{"type": "result", "result": result, "session_id": session, "is_error": False, "num_turns": 3,
+                      "total_cost_usd": cost, "usage": usage}}))
 """)
 
 FAKE_CODEX = textwrap.dedent(f"""\
@@ -442,58 +592,78 @@ FAKE_CODEX = textwrap.dedent(f"""\
             {{"severity": "confusing", "problem": "No tide readout", "where": "index.html", "fixed": True}}]}}))
     for ev in ({{"type": "thread.started", "thread_id": "thread-1"}},
                {{"type": "item.completed", "item": {{"type": "command_execution"}}}},
-               {{"type": "turn.completed", "usage": {{"input_tokens": 900, "output_tokens": 100}}}}):
+               {{"type": "turn.completed", "usage": {{"input_tokens": 900, "cached_input_tokens": 400, "output_tokens": 100}}}}):
         print(json.dumps(ev))
 """)
 
 
 class EndToEnd(TempCase):
-    def test_mock_run_catches_slop_and_retries(self):
+    def test_mock_run_catches_slop_and_fixes_it_cheaply(self):
         repo = self.make_repo()
         code, out, err = self.run_main("run", str(BRIEF), "--repo", str(repo), "--mock", str(HARNESS / "replays" / "demo.json"))
         self.assertEqual(code, 0, out + err)
         run_dir = self.only_run(repo)
         report = json.loads((run_dir / "report.json").read_text())
         self.assertEqual(report["status"], "passed")
-        self.assertEqual({s["id"]: s["attempts"] for s in report["steps"]}, {"diverge": 2, "draft": 2, "audit": 1})
+        self.assertEqual({s["id"]: [a["mode"] for a in s["attempt_log"]] for s in report["steps"]},
+                         {"diverge": ["initial", "fix"], "draft": ["initial", "fix"], "audit": ["initial"]})
         draft = report["steps"][1]
         self.assertEqual(len(draft["denied"]), 3)
+        self.assertEqual(draft["attempt_log"][1]["applied"], 5)  # 4 edits and the corrected message
+        self.assertEqual(draft["attempt_log"][1]["problems"], [])
         self.assertIn("placeholder-company", {v["rule"] for v in draft["all_violations"]})
         diverge = report["steps"][0]
         self.assertEqual({d["tool"] for d in diverge["denied"]}, {"read_file", "search_text"})
-        # The retry prompt carries the structured violation report.
-        retry = (run_dir / "logs" / "draft.2.prompt.md").read_text()
-        self.assertIn('"passed": false', retry)
-        self.assertIn("placeholder-company", retry)
-        # The draft prompt got the brainstorm's directions.
+        # The fix prompt carries the violation report and the numbered lines around each one, not the session.
+        fix = (run_dir / "logs" / "draft.2.fix.md").read_text()
+        self.assertIn('"passed": false', fix)
+        self.assertIn("placeholder-company", fix)
+        self.assertIn("    2 | <html><head><title>My Website</title>", fix)
+        self.assertNotIn("Directions from the brainstorm", fix)
+        self.assertFalse((run_dir / "logs" / "draft.2.prompt.md").exists())
         self.assertIn("Harbor Board", (run_dir / "logs" / "draft.1.prompt.md").read_text())
+        # Usage is summed per step and per run.
+        self.assertEqual(draft["usage"], {"fresh_input": 10800, "cached_input": 52000, "output": 4600, "cost_usd": 0.23})
+        self.assertEqual(report["usage"]["fresh_input"], 7600 + 10800 + 7000)
         # Work landed on the run's branch only; the user's checkout and branches are untouched.
         branch = report["branch"]
-        self.assertIn("Tidelock", git(repo, "show", f"{branch}:index.html"))
+        page = git(repo, "show", f"{branch}:index.html")
+        self.assertIn("Tidelock Ferries", page)
+        self.assertNotIn("Acme", page)
         self.assertEqual(git(repo, "status", "--porcelain"), "")
-        self.assertEqual(git(repo, "rev-parse", "--abbrev-ref", "HEAD"), git(repo, "branch", "--show-current"))
         self.assertFalse((Path("/etc/creative-pipeline-test")).exists())
         self.assertIn("/.creative-pipeline/", (repo / ".git" / "info" / "exclude").read_text())
         state = json.loads((repo / ".creative-pipeline" / "state.json").read_text())
         self.assertEqual(state["runs"][-1]["id"], report["id"])
         self.assertIn("Picked Tidelock", state["decisions"][-1]["decision"])
 
-    def test_retries_stop_at_the_limit(self):
+    def test_resume_mode_keeps_the_session(self):
         repo = self.make_repo()
-        replay = {"draft": [DEMO["draft"][0]]}  # every attempt is the sloppy one
+        code, out, err = self.run_main("run", str(BRIEF), "--repo", str(repo), "--mock", str(HARNESS / "replays" / "demo.json"),
+                                       "--retry", "resume")
+        self.assertEqual(code, 0, out + err)
+        run_dir = self.only_run(repo)
+        report = json.loads((run_dir / "report.json").read_text())
+        self.assertEqual([a["mode"] for a in report["steps"][1]["attempt_log"]], ["initial", "resume"])
+        self.assertIn("rejected this draft", (run_dir / "logs" / "draft.2.prompt.md").read_text())
+
+    def test_a_fix_that_changes_nothing_falls_back_to_resume(self):
+        repo = self.make_repo()
+        miss = {"text": json.dumps({"edits": [{"file": "index.html", "old": "not in the file", "new": "x"}], "message": ""})}
         path = self.tmp / "replay.json"
-        path.write_text(json.dumps(replay))
+        path.write_text(json.dumps({"draft": [DEMO["draft"][0]], "draft.fix": [miss]}))  # every attempt is sloppy
         code, out, _ = self.run_main("run", str(BRIEF), "--repo", str(repo), "--mock", str(path),
-                                     "--skip", "diverge", "--skip", "audit", "--max-retries", "2")
+                                     "--skip", "diverge", "--skip", "audit", "--max-retries", "3")
         self.assertEqual(code, 1)
-        report = json.loads((self.only_run(repo) / "report.json").read_text())
-        self.assertEqual((report["steps"][0]["status"], report["steps"][0]["attempts"]), ("gate-failed", 3))
+        step = json.loads((self.only_run(repo) / "report.json").read_text())["steps"][0]
+        self.assertEqual((step["status"], step["attempts"]), ("gate-failed", 4))
+        self.assertEqual([a["mode"] for a in step["attempt_log"]], ["initial", "fix", "resume", "fix"])
+        self.assertIn("appears 0 times", step["attempt_log"][1]["problems"][0])
 
     def test_lessons_from_earlier_runs_reach_later_prompts(self):
         repo = self.make_repo()
-        for _ in range(2):
+        for _ in range(3):
             self.run_main("run", str(BRIEF), "--repo", str(repo), "--mock", str(HARNESS / "replays" / "demo.json"))
-        self.run_main("run", str(BRIEF), "--repo", str(repo), "--mock", str(HARNESS / "replays" / "demo.json"))
         last = json.loads((repo / ".creative-pipeline" / "state.json").read_text())["runs"][-1]["id"]
         prompt = (repo / ".creative-pipeline" / "runs" / last / "logs" / "draft.1.prompt.md").read_text()
         self.assertIn("Lessons from earlier runs", prompt)
@@ -515,33 +685,87 @@ class EndToEnd(TempCase):
 
     def test_real_cli_adapters_with_fake_binaries(self):
         repo = self.make_repo()
-        bin_dir = self.tmp / "bin"
-        bin_dir.mkdir()
-        for name, body in (("claude", FAKE_CLAUDE), ("codex", FAKE_CODEX)):
-            (bin_dir / name).write_text(body)
-            (bin_dir / name).chmod(0o755)
-        log = self.tmp / "calls.jsonl"
-        env = {"PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}", "FAKE_LOG": str(log)}
+        env, log = self.fake_bins()
         with unittest.mock.patch.dict(os.environ, env):
             code, out, err = self.run_main("run", str(BRIEF), "--repo", str(repo), "--skip", "diverge")
         self.assertEqual(code, 0, out + err)
         calls = [json.loads(l) for l in log.read_text().splitlines()]
         self.assertEqual([c["bin"] for c in calls], ["claude", "claude", "codex"])
-        first, retry = calls[0]["args"], calls[1]["args"]
-        session = first[first.index("--session-id") + 1]
-        self.assertEqual(retry[retry.index("--resume") + 1], session)  # the retry resumes the same session
-        self.assertIn("placeholder-company", calls[1]["prompt"])
+        first, fix = calls[0]["args"], calls[1]["args"]
         self.assertIn("Brief", calls[0]["prompt"])
+        # The retry is a fresh, tool-less call, not a resumed session.
+        self.assertNotIn("--resume", fix)
+        self.assertNotEqual(fix[fix.index("--session-id") + 1], first[first.index("--session-id") + 1])
+        self.assertEqual(fix[-2:], ["--tools", ""])
+        self.assertEqual(json.loads(Path(fix[fix.index("--mcp-config") + 1]).read_text()), {"mcpServers": {}})
+        self.assertIn("placeholder-company", calls[1]["prompt"])
+        self.assertIn("    1 | <title>My Website</title><p>Acme Corp</p>", calls[1]["prompt"])
         run_dir = self.only_run(repo)
         report = json.loads((run_dir / "report.json").read_text())
         draft, audit = report["steps"]
-        self.assertEqual((draft["status"], draft["attempts"]), ("passed", 2))
-        self.assertEqual(draft["usage"]["input_tokens"], 2400)
-        self.assertEqual(audit["usage"], {"input_tokens": 900, "output_tokens": 100})
+        self.assertEqual((draft["status"], [a["mode"] for a in draft["attempt_log"]]), ("passed", ["initial", "fix"]))
+        self.assertEqual(draft["usage"], {"fresh_input": 2250, "cached_input": 5000, "output": 340, "cost_usd": 0.021})
+        self.assertEqual(audit["usage"], {"fresh_input": 500, "cached_input": 400, "output": 100})
+        self.assertIn("Tidelock Ferries", git(repo, "show", f"{report['branch']}:index.html"))
         self.assertTrue(audit["guard_seen"])
         decisions = [json.loads(l) for l in (run_dir / "guard.log").read_text().splitlines()]
-        self.assertEqual([(d["step"], d["tool"], d["decision"]) for d in decisions],
-                         [("draft", "Bash", "deny"), ("draft", "Bash", "deny"), ("audit", "apply_patch", "deny")])
+        self.assertEqual([(d["step"], d["source"], d["tool"], d["decision"]) for d in decisions],
+                         [("draft", "hook", "Bash", "deny"), ("draft", "fix", "Write", "allow"),
+                          ("audit", "hook", "apply_patch", "deny")])
+
+
+class Bench(TempCase):
+    def bench_dir(self, repo):
+        return sorted((repo / ".creative-pipeline" / "bench").iterdir())[-1]
+
+    def test_mock_bench_compares_both_sides(self):
+        repo = self.make_repo()
+        code, out, err = self.run_main("bench", str(BRIEF), "--repo", str(repo), "--mock", str(HARNESS / "replays" / "demo.json"))
+        self.assertEqual(code, 0, out + err)
+        result = json.loads((self.bench_dir(repo) / "bench.json").read_text())
+        base, pipe = result["baseline"], result["pipeline"]
+        self.assertEqual(base["usage"], DEMO["baseline"][0]["usage"])
+        self.assertFalse(base["gate"]["passed"])
+        self.assertTrue(pipe["gate"]["passed"])
+        totals = result["total_tokens"]
+        self.assertEqual(totals["baseline"], 14000 + 98000 + 6100)
+        self.assertEqual(totals["pipeline"], providers.total_tokens(pipe["usage"]))
+        self.assertEqual(totals["change_pct"], round(100 * (totals["pipeline"] - totals["baseline"]) / totals["baseline"], 1))
+        draft = next(s for s in pipe["steps"] if s["id"] == "draft")
+        self.assertEqual(sorted(draft["by_mode"]), ["fix", "initial"])
+        self.assertEqual(draft["by_mode"]["fix"]["fresh_input"], 1800)
+        self.assertIn("seamless", git(repo, "show", f"{base['branch']}:index.html"))
+        self.assertIn("fewer tokens" if totals["change_pct"] < 0 else "more tokens", out)
+        self.assertIn("$0.2300*", out)  # the pipeline's cost leaves out the Gemini and Codex steps
+        self.assertEqual(git(repo, "status", "--porcelain"), "")
+
+    def test_bench_with_fake_binaries(self):
+        repo = self.make_repo()
+        env, log = self.fake_bins()
+        with unittest.mock.patch.dict(os.environ, env):
+            code, out, err = self.run_main("bench", str(BRIEF), "--repo", str(repo), "--skip", "diverge",
+                                           "--baseline-model", "base-model")
+        self.assertEqual(code, 0, out + err)
+        calls = [json.loads(l) for l in log.read_text().splitlines()]
+        self.assertEqual([c["bin"] for c in calls], ["claude", "claude", "claude", "codex"])
+        plain = calls[0]["args"]
+        self.assertNotIn("--strict-mcp-config", plain)
+        self.assertEqual(plain[plain.index("--model") + 1], "base-model")
+        self.assertEqual(calls[0]["prompt"], BRIEF.read_text().strip() + "\n\nBuild this in the current folder.")
+        result = json.loads((self.bench_dir(repo) / "bench.json").read_text())
+        self.assertEqual(result["baseline"]["usage"], {"fresh_input": 3000, "cached_input": 20000, "output": 900, "cost_usd": 0.05})
+        self.assertEqual(result["total_tokens"], {"baseline": 23900, "pipeline": 7590 + 1000, "change_pct": -64.1})
+        self.assertFalse(result["baseline"]["gate"]["passed"])
+        self.assertTrue(result["pipeline"]["gate"]["passed"])
+
+    def test_bench_needs_a_baseline_entry_in_a_replay(self):
+        repo = self.make_repo()
+        path = self.tmp / "replay.json"
+        path.write_text(json.dumps({k: v for k, v in DEMO.items() if k != "baseline"}))
+        code, _, err = self.run_main("bench", str(BRIEF), "--repo", str(repo), "--mock", str(path))
+        self.assertEqual(code, 2)
+        self.assertIn("no 'baseline' entry", err)
+        self.assertFalse((repo / ".creative-pipeline").exists())
 
 
 class Commands(TempCase):

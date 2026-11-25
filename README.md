@@ -7,9 +7,13 @@ An MCP server, a harness, and tooling for building web front ends with Claude Co
 | Folder | What it is |
 | --- | --- |
 | [`mcp/web-dev/motion-forge`](mcp/web-dev/motion-forge/README.md) | An MCP server with motion-rich Web Components, a showcase builder, and a motion audit |
-| [`harnesses/creative-pipeline`](harnesses/creative-pipeline/README.md) | Gemini brainstorms, Claude Code builds, an anti-slop gate rejects stock output, and Codex audits the result |
+| [`harnesses/creative-pipeline`](harnesses/creative-pipeline/README.md) | Gemini brainstorms, Claude Code builds, an anti-slop gate rejects stock output and sends it back for a small, cheap fix, and Codex audits the result. `bench` compares its real token usage with one plain Claude Code session |
 | [`platforms/codex`](platforms/codex/README.md) | Codex tooling: a list of the hook outputs Codex accepts, and a comparison of the models in its catalog |
+| [`platforms/claude`](platforms/claude/README.md) | Where Claude Code installs skills and the extra frontmatter it accepts |
 | `skills/` | Empty for now. `tools/skills.py` installs any skill you add here; see [`AGENTS.md`](AGENTS.md) |
+| `template/` | The starting `SKILL.md` that `tools/skills.py new` copies |
+| `tools/` | `skills.py` (create, validate, install skills), the MCP smoke test, and every test in the repo |
+| `scripts/codex/` | Installs and uninstalls the MCP servers and skills for Codex |
 
 ## Install
 

@@ -1,34 +1,109 @@
 {
-  "about": "A replay for --mock: every step's first attempt has the kinds of problems the gate and guard exist to catch, and the retry fixes them. Run: pipeline.py run replays/demo-brief.md --mock replays/demo.json",
+  "about": "A replay for --mock: every step's first attempt has the kinds of problems the gate and guard exist to catch, and the fix call repairs them. Usage numbers are made up, to show the shape of the report. Run: pipeline.py run replays/demo-brief.md --mock replays/demo.json (or bench instead of run, which also plays the baseline entry)",
   "diverge": [
     {
-      "tool_calls": [{"name": "list_files", "args": {}}, {"name": "read_file", "args": {"path": "../../../../../../etc/hostname"}},
-                     {"name": "search_text", "args": {"pattern": "x"}}],
-      "text": "{\"directions\": [{\"name\": \"Tidelock Ferries\", \"hook\": \"Let's delve into a crucial harbor website about tides and boats.\", \"first_minute\": \"You open the page and see the next departure.\", \"why_not_generic\": \"It is not just a timetable, it's a journey.\"}, {\"name\": \"Harbor Board\", \"hook\": \"The whole page is a flip-style departure board that updates as the tide rises.\", \"first_minute\": \"You watch the 09:40 sailing flip to 10:05 as the tide gauge climbs.\", \"why_not_generic\": \"The obvious version is a table of times; here the board shows why times move.\"}]}"
+      "tool_calls": [
+        {
+          "name": "list_files",
+          "args": {}
+        },
+        {
+          "name": "read_file",
+          "args": {
+            "path": "../../../../../../etc/hostname"
+          }
+        },
+        {
+          "name": "search_text",
+          "args": {
+            "pattern": "x"
+          }
+        }
+      ],
+      "text": "{\"directions\": [{\"name\": \"Tidelock Ferries\", \"hook\": \"Let's delve into a crucial harbor website about tides and boats.\", \"first_minute\": \"You open the page and see the next departure.\", \"why_not_generic\": \"It is not just a timetable, it's a journey.\"}, {\"name\": \"Harbor Board\", \"hook\": \"The whole page is a flip-style departure board that updates as the tide rises.\", \"first_minute\": \"You watch the 09:40 sailing flip to 10:05 as the tide gauge climbs.\", \"why_not_generic\": \"The obvious version is a table of times; here the board shows why times move.\"}]}",
+      "usage": {
+        "fresh_input": 6200,
+        "cached_input": 0,
+        "output": 900
+      }
     },
     {
-      "text": "{\"directions\": [{\"name\": \"Tidelock Ferries\", \"hook\": \"A tide clock at the top of the page shows the water level and the next sailing it allows, updated every 10 minutes.\", \"first_minute\": \"You see the 10:05 sailing, read that high water moved it from 09:40, and tap Book a seat.\", \"why_not_generic\": \"The obvious version is a static timetable; here the tide explains every time on the page.\"}, {\"name\": \"Harbor Board\", \"hook\": \"The whole page is a flip-style departure board that updates as the tide rises.\", \"first_minute\": \"You watch the 09:40 sailing flip to 10:05 as the tide gauge climbs.\", \"why_not_generic\": \"The obvious version is a table of times; here the board shows why times move.\"}, {\"name\": \"Ferry Log\", \"hook\": \"Each departure has a one-line note from the skipper, such as fog on the east quay or seals at the breakwater.\", \"first_minute\": \"You read three skipper notes and pick the calm 14:20 crossing.\", \"why_not_generic\": \"The obvious version is a brochure; here the people running the boat speak on the page.\"}]}"
+      "text": "{\"directions\": [{\"name\": \"Tidelock Ferries\", \"hook\": \"A tide clock at the top of the page shows the water level and the next sailing it allows, updated every 10 minutes.\", \"first_minute\": \"You see the 10:05 sailing, read that high water moved it from 09:40, and tap Book a seat.\", \"why_not_generic\": \"The obvious version is a static timetable; here the tide explains every time on the page.\"}, {\"name\": \"Harbor Board\", \"hook\": \"The whole page is a flip-style departure board that updates as the tide rises.\", \"first_minute\": \"You watch the 09:40 sailing flip to 10:05 as the tide gauge climbs.\", \"why_not_generic\": \"The obvious version is a table of times; here the board shows why times move.\"}, {\"name\": \"Ferry Log\", \"hook\": \"Each departure has a one-line note from the skipper, such as fog on the east quay or seals at the breakwater.\", \"first_minute\": \"You read three skipper notes and pick the calm 14:20 crossing.\", \"why_not_generic\": \"The obvious version is a brochure; here the people running the boat speak on the page.\"}]}",
+      "usage": {
+        "fresh_input": 6600,
+        "cached_input": 0,
+        "output": 1300
+      }
+    }
+  ],
+  "diverge.fix": [
+    {
+      "text": "{\"edits\": [], \"message\": \"{\\\"directions\\\": [{\\\"name\\\": \\\"Tidelock Ferries\\\", \\\"hook\\\": \\\"A tide clock at the top of the page shows the water level and the next sailing it allows, updated every 10 minutes.\\\", \\\"first_minute\\\": \\\"You see the 10:05 sailing, read that high water moved it from 09:40, and tap Book a seat.\\\", \\\"why_not_generic\\\": \\\"The obvious version is a static timetable; here the tide explains every time on the page.\\\"}, {\\\"name\\\": \\\"Harbor Board\\\", \\\"hook\\\": \\\"The whole page is a flip-style departure board that updates as the tide rises.\\\", \\\"first_minute\\\": \\\"You watch the 09:40 sailing flip to 10:05 as the tide gauge climbs.\\\", \\\"why_not_generic\\\": \\\"The obvious version is a table of times; here the board shows why times move.\\\"}, {\\\"name\\\": \\\"Ferry Log\\\", \\\"hook\\\": \\\"Each departure has a one-line note from the skipper, such as fog on the east quay or seals at the breakwater.\\\", \\\"first_minute\\\": \\\"You read three skipper notes and pick the calm 14:20 crossing.\\\", \\\"why_not_generic\\\": \\\"The obvious version is a brochure; here the people running the boat speak on the page.\\\"}]}\"}",
+      "usage": {
+        "fresh_input": 1400,
+        "cached_input": 0,
+        "output": 700
+      }
     }
   ],
   "draft": [
     {
       "tool_calls": [
-        {"tool_name": "Bash", "tool_input": {"command": "git push origin main"}},
-        {"tool_name": "Write", "tool_input": {"file_path": "/etc/creative-pipeline-test", "content": "x"}},
-        {"tool_name": "Bash", "tool_input": {"command": "rm -rf ."}}
+        {
+          "tool_name": "Bash",
+          "tool_input": {
+            "command": "git push origin main"
+          }
+        },
+        {
+          "tool_name": "Write",
+          "tool_input": {
+            "file_path": "/etc/creative-pipeline-test",
+            "content": "x"
+          }
+        },
+        {
+          "tool_name": "Bash",
+          "tool_input": {
+            "command": "rm -rf ."
+          }
+        }
       ],
       "files": {
         "index.html": "<!doctype html>\n<html><head><title>My Website</title>\n<style>body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }</style></head>\n<body><h1>Acme Corp presents</h1><p>Lorem ipsum dolor sit amet.</p>\n<script>\n// TODO: add the timetable\nconst sailings = [];\n</script></body></html>\n",
         "PIPELINE.md": "Picked Tidelock Ferries.\n\nOpen index.html in a browser.\n"
       },
-      "text": "Great question! I built a seamless ferry experience."
+      "text": "Great question! I built a seamless ferry experience.",
+      "usage": {
+        "fresh_input": 9000,
+        "cached_input": 52000,
+        "output": 4200,
+        "cost_usd": 0.21
+      }
     },
     {
       "files": {
         "index.html": "<!doctype html>\n<html><head><title>Tidelock Ferries</title>\n<style>body { background: #2b3a42; color: #e8f1ee; } .book { background: #ff7a1a; }</style></head>\n<body><h1>Tidelock Ferries</h1><p>The harbor floods at dawn. Book before the tide turns.</p>\n<button class=\"book\">Book a seat</button>\n<script>\nconst CONFIG = { tide: { checkEveryMinutes: 10 }, sailings: [\"10:05\", \"14:20\", \"18:45\"] };\n</script></body></html>\n",
         "PIPELINE.md": "Picked Tidelock Ferries: the tide clock explains every time on the page, which the other two directions only hint at.\n\nOpen index.html in a browser. Least sure about: whether a 10-minute tide update is too slow on a spring-tide morning.\n"
       },
-      "text": "Rewrote the title, copy, and palette; removed the stub comment."
+      "text": "Rewrote the title, copy, and palette; removed the stub comment.",
+      "usage": {
+        "fresh_input": 3000,
+        "cached_input": 61000,
+        "output": 1500,
+        "cost_usd": 0.09
+      }
+    }
+  ],
+  "draft.fix": [
+    {
+      "text": "{\"edits\": [{\"file\": \"index.html\", \"old\": \"<title>My Website</title>\", \"new\": \"<title>Tidelock Ferries</title>\"}, {\"file\": \"index.html\", \"old\": \"background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\", \"new\": \"background: #2b3a42; color: #e8f1ee;\"}, {\"file\": \"index.html\", \"old\": \"<h1>Acme Corp presents</h1><p>Lorem ipsum dolor sit amet.</p>\", \"new\": \"<h1>Tidelock Ferries</h1><p>The harbor floods at dawn. Book before the tide turns.</p>\"}, {\"file\": \"index.html\", \"old\": \"// TODO: add the timetable\\nconst sailings = [];\", \"new\": \"const sailings = [\\\"10:05\\\", \\\"14:20\\\", \\\"18:45\\\"];\"}], \"message\": \"Renamed the page, wrote the real copy, set the harbor palette, and filled in the sailings.\"}",
+      "usage": {
+        "fresh_input": 1800,
+        "cached_input": 0,
+        "output": 400,
+        "cost_usd": 0.02
+      }
     }
   ],
   "audit": [
@@ -36,7 +111,26 @@
       "files": {
         "index.html": "<!doctype html>\n<html><head><title>Tidelock Ferries</title>\n<style>body { background: #2b3a42; color: #e8f1ee; } .book { background: #ff7a1a; }</style></head>\n<body><h1>Tidelock Ferries</h1><p>The harbor floods at dawn. Book before the tide turns.</p>\n<p id=\"next\">Next sailing: 10:05</p>\n<button class=\"book\">Book a seat</button>\n<script>\nconst CONFIG = { tide: { checkEveryMinutes: 10 }, sailings: [\"10:05\", \"14:20\", \"18:45\"] };\n</script></body></html>\n"
       },
-      "text": "{\"summary\": \"The page loads with the right title and palette. Nothing showed the next sailing, so I added it above the booking button.\", \"findings\": [{\"severity\": \"confusing\", \"problem\": \"The next sailing time was not on the page\", \"where\": \"index.html body\", \"fixed\": true}]}"
+      "text": "{\"summary\": \"The page loads with the right title and palette. Nothing showed the next sailing, so I added it above the booking button.\", \"findings\": [{\"severity\": \"confusing\", \"problem\": \"The next sailing time was not on the page\", \"where\": \"index.html body\", \"fixed\": true}]}",
+      "usage": {
+        "fresh_input": 7000,
+        "cached_input": 30000,
+        "output": 2500
+      }
+    }
+  ],
+  "baseline": [
+    {
+      "files": {
+        "index.html": "<!doctype html>\n<html><head><title>My Website</title>\n<style>body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }</style></head>\n<body><h1>Harbor Ferries</h1><p>Book a seamless crossing today.</p>\n<button>Book now</button>\n</body></html>\n"
+      },
+      "text": "I built a landing page for the ferry service.",
+      "usage": {
+        "fresh_input": 14000,
+        "cached_input": 98000,
+        "output": 6100,
+        "cost_usd": 0.33
+      }
     }
   ]
 }
