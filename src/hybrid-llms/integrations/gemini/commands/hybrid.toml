@@ -1,0 +1,10 @@
+description = "Send a request through hybrid-llms (local model + cloud model working together)"
+prompt = """
+Call the `hybrid` tool from the `hybrid` MCP server for the request below.
+- `prompt`: the request. Put the contents of any files it mentions in `context`.
+- `strategy`: `auto` unless the request says otherwise (`local`, `cloud`, `cascade`, `draft-review`, `plan-execute`, `compress`).
+- `cloud`: omit it (you are the cloud model) unless the request names claude, codex, or gemini.
+If the result reports needs_host_review, check and fix the answer. Reply with the answer and the `[hybrid]` summary line.
+
+Request: {{args}}
+"""

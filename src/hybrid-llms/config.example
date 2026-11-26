@@ -1,0 +1,56 @@
+# hybrid-llms configuration (key = value; # starts a comment).
+# Location: $HYBRID_LLMS_CONFIG, else ~/.config/hybrid-llms/config.
+# Print the effective values with: hybrid-llms config
+
+# ---------- local model ----------
+# managed: run models from models_dir yourself (GGUF -> llama-server, MLX folder -> mlx_lm.server)
+# ollama:  use an Ollama server at local_url
+# openai:  use any OpenAI-compatible server at local_url (LM Studio, llama-server, vLLM)
+local_api = managed
+models_dir = ~/Documents/Models
+# File/folder name in models_dir, or part of one (e.g. qwen). Empty = first model found.
+local_model =
+# Placeholders: {model} {port} {ctx} {name}. Install with: brew install llama.cpp / pip install mlx-lm
+llama_cmd = llama-server -m {model} --host 127.0.0.1 --port {port} -c {ctx} --jinja
+mlx_cmd = mlx_lm.server --model {model} --host 127.0.0.1 --port {port}
+engine_port = 8790
+engine_ctx = 8192
+engine_load_timeout = 300
+# 1 = keep the engine loaded for other sessions (stop with: hybrid-llms engine stop)
+engine_keep_alive = 1
+# For local_api = ollama / openai:
+local_url = http://127.0.0.1:11434
+local_api_key =
+local_timeout = 300
+# local_temperature = 0.2
+# local_num_ctx = 8192
+strip_think = 1
+
+# ---------- cloud CLIs ----------
+# Cloud for `hybrid-llms ask` and the HTTP API: claude | codex | gemini | none
+default_cloud = claude
+# Cloud for @hybrid inside Claude Code / Codex / Gemini. host = the calling CLI is the cloud model
+# (no extra CLI is started; it reviews the local result itself).
+mcp_cloud = host
+# The prompt is sent on stdin, unless the command contains {prompt}. {out} = temp file for the reply.
+claude_cmd = claude -p --output-format text --strict-mcp-config
+codex_cmd = codex exec --skip-git-repo-check --ephemeral --sandbox read-only --color never --output-last-message {out} -
+gemini_cmd = gemini
+cloud_timeout = 600
+# Nested cloud calls allowed (hybrid-llms inside a CLI that hybrid-llms started). Keep at 1.
+max_depth = 1
+
+# ---------- strategies ----------
+# auto | local | cloud | cascade | draft-review | plan-execute | compress
+default_strategy = auto
+cascade_threshold = 70
+compress_threshold = 12000
+chunk_chars = 12000
+
+# ---------- HTTP daemon (hybrid-llms serve) ----------
+listen_addr = 127.0.0.1
+port = 8787
+# Set a token to require "Authorization: Bearer <token>" (needed if you listen beyond localhost).
+token =
+max_body = 8388608
+max_conns = 64
